@@ -786,7 +786,9 @@ opencode api                  # request to the running server
 opencode serve               # v2 API + web server
 opencode pair                # one-time browser/app links
 opencode mini                # minimal interface
+```
 
+```bash
 # oh-my-opencode-slim (inside OpenCode)
 @orchestrator <task>         # default: plan, split lanes, dispatch, verify
 @explorer <task>             # read-only recon
@@ -795,7 +797,9 @@ opencode mini                # minimal interface
 @fixer <task>                # bounded implementation
 @observer <task>             # reviews / images / diagrams
 @council <task>              # multi-model consensus
+```
 
+```bash
 # OpenSpec
 openspec init                # set up project
 openspec new change <name>  # openspec/changes/<name>
@@ -807,13 +811,17 @@ openspec validate <change>
 openspec status <change>     # artifact completion
 openspec archive <change>
 openspec doctor
+```
 
+```bash
 # Ponytail (inside OpenCode)
 /ponytail lite|full|ultra|off
 /ponytail-review
 /ponytail-audit
 /ponytail-debt
+```
 
+```bash
 # Herdr
 herdr                        # launch/attach
 herdr status
