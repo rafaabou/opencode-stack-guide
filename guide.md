@@ -100,6 +100,8 @@ plugins are outdated.
 | `~/.config/opencode/oh-my-opencode-slim.json` | Agent presets, models, council seats |
 | `~/.config/opencode/plugins/` | Auto-loaded global plugins (`openwolf.js`, `herdr-agent-state.js`) |
 | `.opencode/plugins/` (per project) | Auto-loaded local plugin files and directories |
+| `~/.config/opencode/skills/graphify/` | Graphify skill (`SKILL.md`) |
+| `~/.config/opencode/plugins/graphify.js` | Graphify reminder hook (auto-loaded) |
 | `~/.config/opencode/.ponytail-active` | Current Ponytail level (`full`) |
 | `~/.config/ponytail/config.json` | Optional Ponytail default mode |
 | `~/.config/openspec/config.json` | Global OpenSpec config |
@@ -183,6 +185,33 @@ opencode plugin update           # update all; or name one package
 
 `cli.json` holds terminal-only settings and TUI plugins; keep it separate from
 `opencode.jsonc` so UI changes do not touch providers and models.
+
+### Optional add-on: Graphify
+
+[Graphify](https://github.com/Graphify-Labs/graphify) is a local code knowledge
+graph: tree-sitter AST parsing (no LLM for code), every edge tagged EXTRACTED or
+INFERRED, and a graph you query instead of grepping files. It installs as an
+OpenCode skill plus a small plugin hook, not with `opencode plugin add`.
+
+```bash
+uv tool install graphifyy          # PyPI name has two y's; CLI is `graphify`
+graphify install --platform opencode          # global skill + plugin hook
+graphify opencode install --project           # or project-local .opencode/skills/
+```
+
+Open a new session, then `/graphify .` to build `graphify-out/` and query it:
+
+```bash
+graphify query "what connects auth to the database?"
+graphify path "UserService" "DatabasePool"
+graphify explain "RateLimiter"
+graphify update .                  # refresh after changes
+```
+
+Requires Python 3.11.5–3.14 and `uv` (or `pipx`). The plugin hook adds a
+one-time reminder before the first shell command when `graphify-out/` exists;
+the graph itself stays local. Do not confuse it with the unrelated npm package
+named `graphify`.
 
 ---
 
@@ -861,12 +890,23 @@ herdr agent prompt <agent> "..."
 herdr --skill                # give an agent Herdr's own instructions
 ```
 
+```bash
+# Graphify (optional add-on)
+uv tool install graphifyy
+graphify install --platform opencode
+/graphify .                  # build graphify-out/
+graphify query "..."         # scoped subgraph
+graphify path A B            # shortest path
+graphify update .            # refresh after changes
+```
+
 ## 14. Troubleshooting
 
 | Symptom | Check |
 |---------|-------|
 | Plugin not loaded | Configured paths must be directories; direct files belong in `.opencode/plugins/`; OpenCode 2 uses `plugins`, v1 uses `plugin`; then `opencode reload` |
 | TUI-only plugin missing | Put it in `plugins` in `cli.json`, not `tui.jsonc` |
+| Graphify skill missing | Restart OpenCode; check `~/.config/opencode/skills/graphify/SKILL.md` |
 | Ponytail seems inactive | `cat ~/.config/opencode/.ponytail-active`; `/ponytail` should report `full` |
 | Ponytail fights `AGENTS.md` | The repo's own `AGENTS.md` wins on project conventions; set level `lite` if it is too aggressive |
 | Agent team missing | `~/.config/opencode/oh-my-opencode-slim.json` valid JSON; preset exists; restart OpenCode |
@@ -1001,6 +1041,7 @@ same time; confirm them before redistributing anything.
 | Ponytail | 5.3.3 | MIT | [repo](https://github.com/DietrichGebert/ponytail) · [install](https://github.com/DietrichGebert/ponytail/blob/main/INSTALL.md) |
 | OpenWolf | 2.5.3 | AGPL-3.0 | [repo](https://github.com/cytostack/openwolf) · [docs](https://openwolf.com) |
 | Herdr | 0.9.5 | Apache-2.0 | [repo](https://github.com/herdrdev/herdr) · [docs](https://herdr.dev/docs) |
+| Graphify (optional) | 0.9.121 | Apache-2.0 | [repo](https://github.com/Graphify-Labs/graphify) · [docs](https://docs.graphify.com) |
 
 Two naming traps worth knowing:
 

@@ -11,6 +11,9 @@ A practical guide to running six AI coding tools as one workflow:
 | [OpenWolf](https://github.com/cytostack/openwolf) | Remembers what was learned |
 | [Herdr](https://github.com/herdrdev/herdr) | Terminals, worktrees, parallel agents |
 
+Optional add-on: [Graphify](https://github.com/Graphify-Labs/graphify) builds a local,
+queryable knowledge graph of the codebase as an OpenCode skill and plugin hook.
+
 The model is not the hard part. The handoffs are: what gets built, by whom,
 how much code, and what we remember afterwards. This guide covers install,
 commands, file locations, security, templates, and four real workflows.
