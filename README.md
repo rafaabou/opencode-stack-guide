@@ -33,7 +33,7 @@ Versions re-checked 2026-11-27 against official releases.
 - [Full guide (Markdown)](guide.md)
 - [Full guide (PDF)](opencode-stack-user-guide.pdf)
 
-![The stack: Herdr holds OpenCode, OpenCode runs the agent team, and the three disciplines scope the work.](diagram.png)
+![The stack: Herdr isolates the work, Persona and memory load context, OpenSpec scopes the change, Graphify maps the code, agents implement, Ponytail keeps the diff small, and git ships the result.](diagram.png)
 
 ## What's inside
 

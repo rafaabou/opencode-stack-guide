@@ -32,7 +32,7 @@ what it learned across sessions; Graphify maps the code before you touch it.
 Sections 14 and 20 are the worked versions of this loop; section 22 walks one
 real project end to end, and section 21 is the complete inventory.
 
-![The stack: Herdr holds OpenCode, OpenCode runs the agent team, and the three disciplines scope the work.](diagram.png)
+![The stack: Herdr isolates the work, Persona and memory load context, OpenSpec scopes the change, Graphify maps the code, agents implement, Ponytail keeps the diff small, and git ships the result.](diagram.png)
 
 ---
 
