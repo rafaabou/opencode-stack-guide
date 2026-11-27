@@ -1,6 +1,6 @@
-# OpenCode Stack — Field Guide
+# OpenCode Stack — Field Guide: OpenCode, oh-my-opencode-slim, OpenSpec, Ponytail, OpenWolf, Herdr, Engram, Persona, Graphify, skills and commands
 
-A practical guide to running six AI coding tools, plus memory and persona helpers, as one workflow:
+A practical guide to running the whole stack — nine tools, 47 skills and six custom commands — as one workflow:
 
 | Tool | Role |
 |------|------|

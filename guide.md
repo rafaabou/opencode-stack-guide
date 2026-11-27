@@ -1,9 +1,9 @@
-# OpenCode Stack — Full User Guide
+# OpenCode Stack — Full User Guide: OpenCode, oh-my-opencode-slim, OpenSpec, Ponytail, OpenWolf, Herdr, Engram, Persona, Graphify, skills and commands
 
-A practical field guide to running the OpenCode stack: six core AI tools —
-**OpenCode**, **oh-my-opencode-slim**, **OpenSpec**, **Ponytail**, **OpenWolf**
-and **Herdr** — plus the memory, persona and code-graph layers that make them
-work together.
+A practical field guide to the whole OpenCode stack: nine tools —
+**OpenCode**, **oh-my-opencode-slim**, **OpenSpec**, **Ponytail**, **OpenWolf**,
+**Herdr**, **Engram**, **Persona** and **Graphify** — plus 47 skills, six custom
+commands, agents, plugins and MCP that make them work together.
 Install, commands, file locations, security, templates, the workflows I use
 daily, and a beginner-to-expert runbook (section 20). Versions re-checked
 2026-11-27 against official releases.
