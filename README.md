@@ -17,7 +17,7 @@ Optional add-on: [Graphify](https://github.com/Graphify-Labs/graphify) builds a 
 queryable knowledge graph of the codebase as an OpenCode skill and plugin hook.
 
 This machine also runs Engram 3.7.2 and Persona 3.0.0, and defines six custom
-slash commands. Section 18 is a beginner-to-expert run from an empty folder to a
+slash commands. Section 20 is a beginner-to-expert run from an empty folder to a
 reviewed, remembered change.
 
 The model is not the hard part. The handoffs are: what gets built, by whom,
@@ -44,15 +44,17 @@ Versions re-checked 2026-11-27 against official releases.
 7. Ponytail: decide how little to build
 8. OpenWolf: project memory
 9. Herdr: terminal workspace manager
-10. Security and permissions
-11. When not to use the stack
-12. Working with all six together
-13. Cheat sheet
-14. Troubleshooting
-15. Appendix A: templates
-16. Appendix B: glossary
-17. Appendix C: versions, licenses and sources
-18. Beginner to expert: a complete project run
+10. Persona: role, language and conventions
+11. Engram: the memory layer
+12. Security and permissions
+13. When not to use the stack
+14. Working with the whole stack together
+15. Cheat sheet
+16. Troubleshooting
+17. Appendix A: templates
+18. Appendix B: glossary
+19. Appendix C: versions, licenses and sources
+20. Beginner to expert: a complete project run
 
 ## Note
 

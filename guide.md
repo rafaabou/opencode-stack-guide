@@ -1,9 +1,11 @@
 # OpenCode Stack — Full User Guide
 
-A practical field guide to running six AI tools as one workflow: **OpenCode**,
-**oh-my-opencode-slim**, **OpenSpec**, **Ponytail**, **OpenWolf** and **Herdr**.
+A practical field guide to running the OpenCode stack: six core AI tools —
+**OpenCode**, **oh-my-opencode-slim**, **OpenSpec**, **Ponytail**, **OpenWolf**
+and **Herdr** — plus the memory, persona and code-graph layers that make them
+work together.
 Install, commands, file locations, security, templates, the workflows I use
-daily, and a beginner-to-expert runbook (section 18). Versions re-checked
+daily, and a beginner-to-expert runbook (section 20). Versions re-checked
 2026-11-27 against official releases.
 
 ## 1. The stack at a glance
@@ -24,7 +26,7 @@ Mental model: **Herdr** holds the terminals, **OpenCode** is the agent inside
 each pane, **oh-my-opencode-slim** gives that agent a team, **OpenSpec** decides
 *what* to build, **Ponytail** decides *how little* to build, **OpenWolf**
 remembers what was learned. Persona sets how the agent speaks; Engram remembers
-what it learned across sessions. Sections 12 and 18 are the worked versions of
+what it learned across sessions. Sections 14 and 20 are the worked versions of
 this loop.
 
 ![The stack: Herdr holds OpenCode, OpenCode runs the agent team, and the three disciplines scope the work.](diagram.png)
@@ -103,7 +105,7 @@ contents of `~/.config/opencode/plugins/` and project `.opencode/plugins/`.
 
 After installing, start `opencode` once and run `/mcps` if you use MCP servers.
 
-Permissions and policies: see section 10 for the security and permissions chapter.
+Permissions and policies: see section 12 for the security and permissions chapter.
 Updates are `opencode upgrade`, `openspec update`,
 `npm i -g @fission-ai/openspec@latest`, `herdr update`, and
 `opencode plugin update`. Run `opencode plugin check` to see which package
@@ -406,7 +408,7 @@ leaves one small test behind. Every reply ends with what was skipped and the ris
 Deactivate with `stop ponytail`, `normal mode`, or `/ponytail off`. Resume with
 `/ponytail`.
 
-The full discipline rules live in section 11.
+The full discipline rules live in section 13.
 
 ### Defaults
 
@@ -516,13 +518,108 @@ human setup guide: <https://herdr.dev/agent-guide.md>.
 
 ---
 
-## 10. Security and permissions — what the agent may touch
+## 10. Persona — role, language and conventions
+
+Persona decides **how the assistant behaves for you**. It does not decide what
+gets built (OpenSpec), how little code is written (Ponytail) or what is remembered
+(Engram). The role *definitions* are shared in the repo; *your* role and
+preferences are personal and live in Engram on your machine.
+
+### Install and verify
+
+Persona needs Engram installed first — it stores everything there. Pin the
+version so a later release cannot change your sessions silently:
+
+```bash
+opencode plugin add opencode-persona@3.0.0
+opencode plugin list                      # look for opencode-persona
+mkdir -p harness/user-roles               # DEV.md ARQ.md BA.md QA.md DL.md
+```
+
+The first session asks for your role; answer once and it loads automatically
+after that. Acceptable roles: `developer`, `architect`, `analyst`, `qa`,
+`delivery`. Each role reads its own file from `harness/user-roles/` in the
+**project**, so the same role can behave differently in different repos. On this
+machine the role is `architect` but `harness/user-roles/ARQ.md` is missing, so
+Persona falls back to its default behaviour — add that file to get the full role.
+
+### Configure it by chat
+
+There are no slash commands and no config file to edit. Just say what you want;
+the assistant calls the Persona tools itself.
+
+| Say | Result |
+|-----|--------|
+| "change my role to QA" | `save_user_role` updates the role in place |
+| "always reply in English" | `save_user_preferences` sets language |
+| "be more brief" | `save_user_preferences` sets detail level |
+| "commits in this repo are in English" | `save_convention` (project scope) |
+| "save as a global convention: never use any" | `save_convention` (global scope) |
+| "what do I have recorded in Persona?" | `get_persona_status` reads the local database |
+
+`get_persona_status` reports what is **actually stored**, not what a repo doc
+claims. Role and preferences are personal and follow you across projects;
+project conventions stay in that project; global conventions go everywhere.
+Nothing is shared with teammates except the role files in the repo.
+
+### OpenCode v2 caveats
+
+On v2 there is no active-role line prepended to replies, and no update notice;
+the role is still injected, and save confirmations carry the `Persona plugin:` marker. Subagent sessions are ignored. A missing role file is reported and the
+session continues with default behaviour. Logs: `~/.persona/persona.log`.
+
+---
+
+## 11. Engram — the memory layer
+
+Engram is a single Go binary with SQLite + FTS5 (`~/.engram/engram.db`) exposed
+over MCP, a local HTTP API and a TUI. It remembers decisions, bugs, constraints
+and resumption state **across sessions and projects**. This is different from
+OpenWolf: OpenWolf's `.wolf/` is project-local anatomy and buglog; Engram is the
+curated cross-project brain.
+
+### Install and verify
+
+```bash
+engram setup opencode         # writes MCP entry into opencode.json
+# restart OpenCode after setup
+engram --version              # 3.7.2 here
+engram doctor                 # read-only store diagnostics
+```
+
+The MCP entry on this machine runs `engram mcp --tools=agent` from
+`~/.config/opencode/opencode.json`. Persona depends on this working.
+
+### Use it deliberately
+
+Treat Engram as a curated memory, not a transcript sink. The agent calls these
+MCP tools on its own, but you can ask for them explicitly:
+
+| Intent | Tool |
+|--------|------|
+| Confirm the current project | `mem_current_project` |
+| Recover recent work | `mem_context` |
+| Find prior knowledge before repeating it | `mem_search` |
+| Inspect a full observation (search gives previews) | `mem_get_observation` |
+| Save a durable decision, bugfix or pattern | `mem_save` |
+| Update an evolving topic instead of duplicating | `mem_update` with a stable `topic_key` |
+| Hand off a session | `mem_session_summary` |
+
+A useful memory has a short searchable title, a type (`decision`, `bugfix`,
+`pattern`, `architecture`, `config`, ...) and `**What** / **Why** / **Where** /
+**Learned**` content. Search before re-deriving anything, and never store raw
+dumps, secrets or routine progress. Browse everything with `engram tui`
+(`j`/`k`, `/` to search, `Enter` to open, `c` to copy).
+
+---
+
+## 12. Security and permissions — what the agent may touch
 
 The agent runs as **you**. Every tool call uses your UID, your filesystem, your
 network, your SSH agent and any cloud token in your environment. Permissions
 reduce accidents. They do not contain a hostile prompt.
 
-### 10.1 The trust model
+### 12.1 The trust model
 
 - `read`, `edit` and `shell` reach anything your user can reach.
 - `external_directory` **defaults to allow** outside the project — add an `ask`
@@ -534,7 +631,7 @@ reduce accidents. They do not contain a hostile prompt.
 - Shell checks use a best-effort scanner. Compound commands, `eval`, and
   anything dynamic are where it stops being reliable.
 
-### 10.2 A starter policy
+### 12.2 A starter policy
 
 Put shared rules at the top level, narrow rules after them (last match wins):
 
@@ -566,7 +663,7 @@ Put shared rules at the top level, narrow rules after them (last match wins):
 Paths in `read` and `external_directory` rules expand `~`, `$HOME` and
 `$HOME/`. Shell resources do **not** — write them as plain command text.
 
-### 10.3 Keys and secrets
+### 12.3 Keys and secrets
 
 A **public** key is not a secret. Paste it into the chat as text when you want
 it reviewed; no file access and no shell needed.
@@ -585,7 +682,7 @@ env -u SSH_AUTH_SOCK opencode
 Provider keys belong in `{file:...}` indirection, not inline in the config.
 The value is a path such as `secrets/provider.key`.
 
-### 10.4 MCP servers are context and trust
+### 12.4 MCP servers are context and trust
 
 - Every server injects its tool schemas into **every** prompt. Three to five
   servers is a working ceiling; ten is self-harm.
@@ -595,7 +692,7 @@ The value is a path such as `secrets/provider.key`.
   Install only what you would run yourself.
 - Never give a generic database MCP a production credential.
 
-### 10.5 What this does not do
+### 12.5 What this does not do
 
 Permissions are guardrails, not a sandbox. A container or VM with no key
 material, no cloud credentials and no network is the only real isolation for
@@ -609,7 +706,7 @@ command that pastes untrusted arguments into one.
 
 ---
 
-## 11. When not to use the stack
+## 13. When not to use the stack
 
 The failure mode of a good workflow is ceremony. These are the cases where the
 right move is to drop a layer.
@@ -639,9 +736,9 @@ The stack is at its best on multi-file changes with a review gate. On a
 
 ---
 
-## 12. Working with all six together — maximum gain
+## 14. Working with the whole stack together — maximum gain
 
-### 12.1 Who decides what
+### 14.1 Who decides what
 
 Each tool owns one decision. Overlap is what makes stacks feel heavy; keep the
 jobs separate.
@@ -653,8 +750,11 @@ jobs separate.
 | Who does the work (plan, delegate, review) | **oh-my-opencode-slim** | you do not micromanage lanes |
 | How much code is written | **Ponytail** | no gold-plating, no stubs |
 | What was learned (bugs, rules, file map) | **OpenWolf** | no re-debugging the same bug |
+| What was decided in an earlier session | **Engram** | no re-deriving old decisions |
+| Where code lives and what depends on it | **Graphify** | no blind grep or full-file reads |
+| How the assistant addresses you | **Persona** | role, language and detail are not re-explained |
 
-### 12.2 The loop
+### 14.2 The loop
 
 ```text
 Herdr          OpenSpec        orchestrator      Ponytail        reviewers        OpenWolf
@@ -666,9 +766,11 @@ where     →    what       →    who          →    how much   →    is it s
 
 Start in Herdr, decide scope with OpenSpec when it is worth it, let the
 orchestrator route the work, let Ponytail keep it small, review with the Ponytail
-checkers, and let OpenWolf keep the lessons.
+checkers, and let OpenWolf keep the lessons. Persona loads first; Engram and
+OpenWolf answer "have we seen this before?" at different scopes; Graphify maps
+the code before you change it.
 
-### 12.3 Weight the process to the task
+### 14.3 Weight the process to the task
 
 Process is a cost. Match it to the size of the change.
 
@@ -682,7 +784,7 @@ Process is a cost. Match it to the size of the change.
 The most common failure is running the big process on small work. The second is
 skipping the spec on a feature and re-discovering the requirements in review.
 
-### 12.4 Scenario A — small fix (minutes)
+### 14.4 Scenario A — small fix (minutes)
 
 ```text
 You (in OpenCode):  "The export button shows the wrong date format. Fix it."
@@ -696,7 +798,7 @@ AI:                 flags nothing, or names the real risk
 - If the fix needed a shortcut, it leaves a `shortcut:` comment; `/ponytail-debt`
   will collect it later.
 
-### 12.5 Scenario B — feature with a spec
+### 14.5 Scenario B — feature with a spec
 
 ```text
 You:  "openspec new change: add CSV export to reports"
@@ -714,7 +816,7 @@ Where the gain comes from: the spec stops scope creep *before* code exists, and
 Ponytail stops the spec from turning into an architecture essay. Verify catches
 "implemented but not what was asked" — the failure mode plain code review misses.
 
-### 12.6 Scenario C — parallel lanes (big change)
+### 14.6 Scenario C — parallel lanes (big change)
 
 Use Herdr when one agent is the bottleneck.
 
@@ -739,7 +841,7 @@ herdr agent wait <agent> ...            # see: herdr agent wait --help
 - Reconcile the lanes yourself (or with `@oracle`) before the final review.
 - Merge only after `/ponytail-review` passes in each lane.
 
-### 12.7 Scenario D — the bug that keeps coming back
+### 14.7 Scenario D — the bug that keeps coming back
 
 ```text
 You:  "We fixed this before — check known bugs"
@@ -755,7 +857,7 @@ AI:   wolf_log_bug records the fix; cerebrum.md records the rule
 This is the highest-leverage loop in the stack: OpenWolf turns one expensive
 debugging session into a permanent asset.
 
-### 12.8 Power combos — what each pairing buys you
+### 14.8 Power combos — what each pairing buys you
 
 | Combination | Gain |
 |-------------|------|
@@ -768,8 +870,14 @@ debugging session into a permanent asset.
 | **Ponytail-review + @oracle** | Cheap review first; escalate only the findings that matter |
 | **Council + @oracle** | Multi-model consensus for irreversible decisions (schema, auth, migrations) |
 | **Ponytail-debt + OpenWolf** | Deferred shortcuts and known bugs become one visible backlog |
+| **Persona + Engram** | Role, language, detail and conventions load automatically; no re-onboarding |
+| **Persona + OpenSpec** | Same change yields acceptance criteria for an analyst, an ADR for an architect, a test plan for QA |
+| **Engram + OpenWolf** | Cross-session decisions plus project-local buglog: two scopes of "seen this before" |
+| **Graphify + @explorer** | Graph answers "where is X"; the explorer reads only what the graph cannot |
+| **Graphify + OpenSpec** | Delta specs are grounded in real dependency edges before implementation |
+| **Graphify + Ponytail-review** | `graphify affected` shows which untouched callers a minimal diff can break |
 
-### 12.9 Phrasebook — what to type
+### 14.9 Phrasebook — what to type
 
 | Goal | Say |
 |------|-----|
@@ -785,8 +893,11 @@ debugging session into a permanent asset.
 | Consensus | "Run the council on this decision" |
 | Parallel work | "Split into lanes with non-overlapping files" |
 | Remember a fix | "Log this bug and the rule to avoid it" |
+| Check your setup | "what do I have recorded in Persona?" |
+| Learn a codebase | "/graphify . then graphify query \"what connects X to Y?\"" |
+| Recall a decision | "search memory for the auth decision" |
 
-### 12.10 Guardrails — what not to do
+### 14.10 Guardrails — what not to do
 
 - **Do not run OpenSpec on a one-line fix.** The artifacts cost more than the change.
 - **Do not set ultra as the default.** It questions the request every time; use it
@@ -798,30 +909,38 @@ debugging session into a permanent asset.
   Small, in-context work should stay in the main session.
 - **Do not skip the test on logic with branches, money or security.** Ponytail
   never cuts that.
+- **Do not store raw dumps in Engram.** Curate decisions, bugs and constraints;
+  use `mem_update` for evolving topics.
+- **Do not work on a large repo with a stale graph.** `graphify update .` after
+  each landed change.
 - **Do not archive a change you have not verified.** `openspec verify` first.
 
-### 12.11 Routine
+### 14.11 Routine
 
 **Every session**
 
 - Open Herdr, attach the project workspace, start OpenCode.
 - Check `/ponytail` reports `full`.
-- Let OpenWolf answer "have we seen this before?".
+- Let OpenWolf answer "have we seen this before?" and Engram answer "what did
+  we already decide?".
+- Confirm the role with "what do I have recorded in Persona?".
 
 **Weekly**
 
 - `/ponytail-debt` — harvest and triage `shortcut:` comments.
 - `openspec list` — archive or close stale changes.
 - `/ponytail-review` on the week's diff before it grows.
+- `graphify update .` after the week's changes.
 
 **Monthly / before a release**
 
 - `/ponytail-audit` — whole-repo ranking, fix the top item first.
 - `openspec doctor` + `openspec validate` on active specs.
 - Prune `.wolf/memory.md` and `cerebrum.md`; keep rules that still hold.
+- `engram doctor`; prune stale memories that contradict the code.
 - `herdr status`; stop stale sessions and workspaces.
 
-### 12.12 Which tool when — the one-line rule
+### 14.12 Which tool when — the one-line rule
 
 - New feature or behavior change → **OpenSpec**.
 - Small fix or refactor → **skip OpenSpec**, just ask (Ponytail full).
@@ -829,10 +948,13 @@ debugging session into a permanent asset.
 - Several terminals, long-running agents, isolated branches → **Herdr**.
 - "We fixed this before" → **OpenWolf**.
 - Team of agents doing the work → **oh-my-opencode-slim** (default orchestrator).
+- "How should the agent talk to me?" → **Persona** (role, language, detail).
+- "What did we decide before?" → **Engram**; "we fixed this before" → **OpenWolf**.
+- "Where is X / what breaks if I change it?" → **Graphify**.
 
 ---
 
-## 13. Cheat sheet
+## 15. Cheat sheet
 
 One block per tool. Copy-paste these, do not memorize them.
 
@@ -939,7 +1061,24 @@ graphify path A B            # shortest path
 graphify update .            # refresh after changes
 ```
 
-## 14. Troubleshooting
+```bash
+# Persona (configure in chat, no slash command)
+"change my role to QA"
+"always reply in English" / "be more brief"
+"commits in this repo are in English"
+"what do I have recorded in Persona?"
+```
+
+```bash
+# Engram (MCP tools called by the agent)
+mem_current_project / mem_context / mem_search
+mem_get_observation / mem_save / mem_update
+mem_session_summary
+engram tui                   # browse memory
+engram doctor                # store diagnostics
+```
+
+## 16. Troubleshooting
 
 | Symptom | Check |
 |---------|-------|
@@ -959,7 +1098,7 @@ graphify update .            # refresh after changes
 
 ---
 
-## 15. Appendix A — templates to copy
+## 17. Appendix A — templates to copy
 
 ### A. Minimal `opencode.jsonc`
 
@@ -1051,7 +1190,7 @@ Then validate, implement, verify, and archive: `openspec validate <change>`,
 
 ---
 
-## 16. Appendix B — glossary
+## 18. Appendix B — glossary
 
 | Term | Meaning |
 |------|---------|
@@ -1070,7 +1209,7 @@ Then validate, implement, verify, and archive: `openspec validate <change>`,
 | **Preset** | A named model/agent configuration in oh-my-opencode-slim |
 | **Pane** | One terminal inside a Herdr tab, usually running one agent |
 
-## 17. Appendix C — versions, licenses and sources
+## 19. Appendix C — versions, licenses and sources
 
 Checked against official releases on 2026-11-27. Licenses were checked at the
 same time; confirm them before redistributing anything.
@@ -1101,13 +1240,13 @@ rather than implying authorship.
 
 ---
 
-## 18. From beginner to expert — a complete project run
+## 20. From beginner to expert — a complete project run
 
 This chapter is the "start to finish, nothing skipped" version. It assumes a fresh
 machine, an empty folder, and a change that must ship. Use the earlier sections for
 depth; use this one as a checklist.
 
-### 18.1 The ladder
+### 20.1 The ladder
 
 | Level | What you can do | Tools you touch |
 |-------|----------------|-----------------|
@@ -1118,7 +1257,7 @@ depth; use this one as a checklist.
 You do not graduate by reading more. You graduate when you can skip ceremony on a
 one-line fix and add it on a risky multi-file change without being told.
 
-### 18.2 Day 0 — install and verify once
+### 20.2 Day 0 — install and verify once
 
 ```bash
 curl -fsSL https://opencode.ai/v2/install | bash     # v2, not npm opencode-ai@1.x
@@ -1142,7 +1281,7 @@ Then look at the three config surfaces: `~/.config/opencode/opencode.json`
 and `~/.config/opencode/oh-my-opencode-slim.jsonc` (agents and presets). Project
 overrides go in `opencode.jsonc` or `.opencode/` inside the repo.
 
-### 18.3 Beginner — first hour
+### 20.3 Beginner — first hour
 
 1. `mkdir myproj && cd myproj && git init` — give the agent a repo, not a loose folder.
 2. `opencode` — start the TUI. `/` lists commands; `Tab` switches agent.
@@ -1156,7 +1295,7 @@ overrides go in `opencode.jsonc` or `.opencode/` inside the repo.
 Do not install OpenSpec, Herdr or a council for step 6. A small fix should feel like
 no process at all.
 
-### 18.4 Every installed command — what it is for
+### 20.4 Every installed command — what it is for
 
 | Command | Use it when | Argument style |
 |---------|-------------|----------------|
@@ -1177,7 +1316,7 @@ no process at all.
 `/interview` writes a markdown brief; `/implement` reads that brief and builds it.
 That pair is the shortest path from a vague idea to a first working version.
 
-### 18.5 Advanced — one feature, empty folder to archived change
+### 20.5 Advanced — one feature, empty folder to archived change
 
 1. **Frame it.** Use `/interview` for a messy idea, or write one sentence yourself.
 2. **Decide scope.** In the repo: `openspec init` (once), then the `openspec-explore`
@@ -1203,7 +1342,7 @@ That pair is the shortest path from a vague idea to a first working version.
 9. **Refresh the graph.** `graphify update .` after the change lands. A stale graph
    is worse than no graph.
 
-### 18.6 Expert — parallel lanes and long-lived projects
+### 20.6 Expert — parallel lanes and long-lived projects
 
 - **Isolation before parallelism.** `herdr` → `herdr workspace create <name>` →
   `herdr worktree create ...`; one OpenCode pane per worktree. Drive them with
@@ -1223,13 +1362,13 @@ That pair is the shortest path from a vague idea to a first working version.
   frontmatter. Skills are `SKILL.md` folders; use `skill-creator`. New agents go in
   `~/.config/opencode/agent/`; use `agent-creator`. Plugins must use V2's
   `export default { id, setup(ctx) }` — V1 named-export plugins will not load
-  (see `opencode-agent-factory-plugin` in section 15).
+  (see `opencode-agent-factory-plugin` in section 17).
 - **Automate carefully.** `/automation` can run a prompt or shell command on a cron.
   Give it a narrow scope and review its output; it runs without you in the loop.
-- **Guard the boundaries.** Keep `permissions` and `policies` in section 10. An
+- **Guard the boundaries.** Keep `permissions` and `policies` in section 12. An
   `ask` rule is a speed bump, not a sandbox; a deny policy is the hard stop.
 
-### 18.7 Expert review gates
+### 20.7 Expert review gates
 
 | Gate | When | Command |
 |------|------|---------|
@@ -1240,7 +1379,7 @@ That pair is the shortest path from a vague idea to a first working version.
 | Regression | Any behaviour change | project test command from `AGENTS.md` |
 | Memory | End of a hard session | `mem_session_summary` (Goal, Instructions, Discoveries, Accomplished, Next Steps, Relevant Files) |
 
-### 18.8 Routine that keeps this cheap
+### 20.8 Routine that keeps this cheap
 
 - **Each session:** open Herdr workspace, start OpenCode, confirm `/ponytail`,
   search Engram/OpenWolf for prior work before re-deriving it.
@@ -1252,7 +1391,7 @@ That pair is the shortest path from a vague idea to a first working version.
   `opencode plugin update`, `herdr status`, rotate any credential that touched a
   shared session.
 
-### 18.9 Know when to stop
+### 20.9 Know when to stop
 
 Skip the ladder entirely for a typo, a throwaway script, or a spike. Skip OpenSpec
 when you cannot yet specify the outcome. Skip parallel lanes when the work is one
