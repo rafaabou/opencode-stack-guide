@@ -3,15 +3,15 @@
 A practical field guide to running six AI tools as one workflow: **OpenCode**,
 **oh-my-opencode-slim**, **OpenSpec**, **Ponytail**, **OpenWolf** and **Herdr**.
 Install, commands, file locations, security, templates, and the workflows I use
-daily. Versions reflect October 2026.
+daily. Versions reflect November 2026.
 
 ## 1. The stack at a glance
 
 | Tool | Role | Runs as |
 |------|------|---------|
-| **OpenCode** | The AI coding host: chat, agents, tools, models | `opencode` CLI/TUI (v2.2.1) |
+| **OpenCode** | The AI coding host: chat, agents, tools, models | `opencode` CLI/TUI (v2.4.2) |
 | **oh-my-opencode-slim** | Agent team + presets on top of OpenCode (orchestrator, explorer, oracle, designer, fixer, observer, council) | TUI plugin + agent presets |
-| **OpenSpec** | Spec-driven development: proposals, specs, tasks, archive | `openspec` CLI (1.14.0) + OpenCode skills |
+| **OpenSpec** | Spec-driven development: proposals, specs, tasks, archive | `openspec` CLI (2.2.0) + OpenCode skills |
 | **Ponytail** | Coding style: smallest complete change, no over-engineering | OpenCode plugin (level: full) |
 | **OpenWolf** | Project memory: file anatomy, bug fixes, do-not-repeat rules | OpenCode plugin (`.wolf/`) |
 | **Herdr** | Terminal workspace manager: sessions, tabs, panes, git worktrees, agent control | `herdr` CLI + server |
@@ -59,9 +59,9 @@ curl -fsSL https://herdr.dev/install.sh | sh
 Then verify:
 
 ```bash
-opencode --version      # v2.2.1
-openspec --version      # 1.14.0
-herdr --version         # 0.9.3
+opencode --version      # v2.4.2
+openspec --version      # 2.2.0
+herdr --version         # 0.9.5
 herdr status            # client/server state, not a version check
 ```
 
@@ -70,22 +70,24 @@ herdr status            # client/server state, not a version check
 | Tool | Registers as | Lives in |
 |------|--------------|----------|
 | OpenCode | Host binary | `~/.local/bin/opencode` |
-| oh-my-opencode-slim | TUI plugin (installer may also add it to `plugins`) | `tui.jsonc` → `plugin`, package cache |
+| oh-my-opencode-slim | Package plugin | `opencode.jsonc` → `plugins` (v1: `plugin`), package cache |
 | Ponytail | Package plugin | `opencode.jsonc` → `plugins` |
-| OpenWolf | Local plugin file | `plugins/openwolf.js` |
+| OpenWolf | Local plugin file | `~/.config/opencode/plugins/openwolf.js` |
 | OpenSpec | Standalone CLI, not a plugin | `openspec/` per project |
 | Herdr | Standalone CLI, not a plugin | `~/.local/bin/herdr` |
 
 `opencode plugin list` only reports managed package plugins. It will not show
-local files in `plugins/` or TUI plugins. Check the three surfaces directly:
-the `plugins` array in `opencode.jsonc`, the `plugin` array in `tui.jsonc`, and
-the contents of `~/.config/opencode/plugins/`.
+local files or terminal-only plugins. Check the three surfaces directly: the
+`plugins` array in `opencode.jsonc`, the `plugins` array in `cli.json`, and the
+contents of `~/.config/opencode/plugins/` and project `.opencode/plugins/`.
 
 After installing, start `opencode` once and run `/mcps` if you use MCP servers.
 
 Permissions and policies: see section 10 for the security and permissions chapter.
-Updates are `opencode upgrade`, `npm i -g @fission-ai/openspec@latest`,
-`herdr update`, and `opencode plugin update`.
+Updates are `opencode upgrade`, `openspec update`,
+`npm i -g @fission-ai/openspec@latest`, `herdr update`, and
+`opencode plugin update`. Run `opencode plugin check` to see which package
+plugins are outdated.
 
 ---
 
@@ -94,10 +96,10 @@ Updates are `opencode upgrade`, `npm i -g @fission-ai/openspec@latest`,
 | Path | What it is |
 |------|------------|
 | `~/.config/opencode/opencode.jsonc` | Main OpenCode config: providers, models, plugins |
-| `~/.config/opencode/tui.jsonc` | TUI settings |
-| `~/.config/opencode/cli.json` | CLI settings |
+| `~/.config/opencode/cli.json` | TUI/CLI settings, including terminal-only plugins |
 | `~/.config/opencode/oh-my-opencode-slim.json` | Agent presets, models, council seats |
-| `~/.config/opencode/plugins/` | Auto-loaded plugins (`openwolf.js`, `herdr-agent-state.js`) |
+| `~/.config/opencode/plugins/` | Auto-loaded global plugins (`openwolf.js`, `herdr-agent-state.js`) |
+| `.opencode/plugins/` (per project) | Auto-loaded local plugin files and directories |
 | `~/.config/opencode/.ponytail-active` | Current Ponytail level (`full`) |
 | `~/.config/ponytail/config.json` | Optional Ponytail default mode |
 | `~/.config/openspec/config.json` | Global OpenSpec config |
@@ -132,6 +134,9 @@ opencode mcp logout <name>
 opencode auth login      # add a provider credential
 opencode plugin add @dietrichgebert/ponytail
 opencode plugin list
+opencode plugin list --builtin
+opencode plugin check
+opencode plugin update [@dietrichgebert/ponytail]
 opencode plugin remove @dietrichgebert/ponytail
 opencode session list
 opencode session delete    # Delete a session and its child sessions
@@ -153,8 +158,8 @@ opencode debug --help    # troubleshooting tools
 
 ### Config
 
-`opencode.jsonc` holds `providers`, `disabled_providers`, `plugin` (v1 key) and
-`plugins` (v2 key). A typical setup can have both:
+`opencode.jsonc` holds `providers`, `disabled_providers` and `plugins` (array).
+OpenCode 1 used `plugin`; a config migrated from v1 can still have both:
 
 ```jsonc
 "plugin":  ["opencode-models-discovery@1.8.0", "oh-my-opencode-slim"],
@@ -164,19 +169,29 @@ opencode debug --help    # troubleshooting tools
 Rules of thumb:
 
 - OpenCode 2 uses **`plugins`** (array). OpenCode 1 uses **`plugin`**.
-- A path entry must point to a **directory**, never a single `.mjs` file.
+- A configured path entry must point to a **directory**, never a single file.
+  Direct `.ts`/`.js` files are discovered only inside `.opencode/plugins/`.
 - A checkout can be shared with `"/absolute/path/to/checkout/.opencode/plugins"`.
+- Prefix an ID with `-` to disable it, or use `"*"` to affect every plugin.
 - After editing, run `opencode reload` or restart.
 
-`cli.json` and `tui.jsonc` are separate so you can change UI/CLI behavior without
-touching providers and models.
+```bash
+opencode plugin list --builtin   # include built-in plugins
+opencode plugin check            # report outdated package plugins
+opencode plugin update           # update all; or name one package
+```
+
+`cli.json` holds terminal-only settings and TUI plugins; keep it separate from
+`opencode.jsonc` so UI changes do not touch providers and models.
 
 ---
 
 ## 5. oh-my-opencode-slim — the agent team
 
 Installed as an OpenCode plugin; configuration in
-`~/.config/opencode/oh-my-opencode-slim.json`. The `free` preset is used here; presets are defined in that file.
+`~/.config/opencode/oh-my-opencode-slim.json` (or `.opencode/oh-my-opencode-slim.json`
+per project). The installer creates `openai` and `opencode-go` presets; the
+`free` preset used in this guide is a custom one. Presets are defined in that file.
 
 ### Agents
 
@@ -197,7 +212,10 @@ dispatched when their write scopes do not overlap.
 ### Configuration
 
 The JSON file sets, per preset: model, variant, disabled agents, image routing,
-multiplexer and the council roster. `preset: "free"` selects the free-model set.
+multiplexer and the council roster. `preset: "free"` selects the free-model set;
+`/preset <name>` switches presets in the current session. Background delegation
+is the default; a multiplexer such as Herdr, Tmux or Zellij shows each agent in
+its own pane.
 Backups (`*.bak-*`) are kept next to it — restore one if an edit breaks things.
 
 To tune agents, models, skills, MCPs or presets, load the `oh-my-opencode-slim`
@@ -215,7 +233,7 @@ skill in OpenCode and ask; it knows the schema and the safe edit flow.
 ## 6. OpenSpec — decide what to build
 
 OpenSpec turns a request into artifacts: **proposal → specs (delta) → design →
-tasks**, then implements and archives. It is installed globally (1.14.0) and
+tasks**, then implements and archives. It is installed globally (2.2.0) and
 its skills are available inside OpenCode.
 
 ### Initialize a project
@@ -237,6 +255,7 @@ openspec show <change>        # one change
 openspec status <change>      # artifact completion
 openspec validate <change>    # structural validation
 openspec archive <change>     # archive + merge deltas into main specs
+openspec update               # add/refresh skills after upgrading OpenSpec
 openspec doctor               # health of the OpenSpec root
 openspec context              # print working context
 ```
@@ -257,6 +276,7 @@ These are the workflow shortcuts (invoke them by name or just ask in plain words
 
 | Skill | Purpose |
 |-------|---------|
+| `openspec` | Router: describe the task in words; it picks the skill (v2.2+) |
 | `openspec-new-change` | Start a change (proposal first) |
 | `openspec-continue-change` | Create the next artifact |
 | `openspec-ff-change` | Fast-forward all artifacts in one pass |
@@ -269,6 +289,8 @@ These are the workflow shortcuts (invoke them by name or just ask in plain words
 | `openspec-update-change` | Revise a plan and keep artifacts coherent |
 | `openspec-explore` | Thinking partner before/while a change |
 | `openspec-onboard` | Guided end-to-end walkthrough |
+
+The router does not replace the workflow skills — every named skill still works.
 
 ### Example
 
@@ -353,14 +375,14 @@ Plugin: `~/.config/opencode/plugins/openwolf.js` (auto-loaded). Data lives in
 | File | Contents |
 |------|----------|
 | `.wolf/OPENWOLF.md` | Rules the agent follows |
-| `.wolf/anatomy.md` | File descriptions/sizes — check before reading a file |
+| `.wolf/anatomy.md` / `.wolf/anatomy-index.json` | File descriptions/sizes — check before reading a file |
 | `.wolf/cerebrum.md` | Do-not-repeat rules — check before writing |
 | `.wolf/buglog.json` | Logged bugs/fixes |
 | `.wolf/memory.md` | General memory |
 | `.wolf/token-ledger.json` | Token accounting |
 
-Current releases (2.5+) use `.wolf/anatomy-index.json`; older installs use
-`anatomy.md`. The workflow is identical — check whichever file exists.
+Releases 2.5+ use `.wolf/anatomy-index.json` (and support native OpenCode v2
+events); older installs use `anatomy.md`. Check whichever file exists.
 
 Workflow it enforces:
 
@@ -772,6 +794,9 @@ opencode auth import          # import credentials
 opencode auth switch          # switch the active account
 opencode plugin add @dietrichgebert/ponytail
 opencode plugin list
+opencode plugin list --builtin
+opencode plugin check
+opencode plugin update [@dietrichgebert/ponytail]
 opencode plugin remove @dietrichgebert/ponytail
 opencode session list
 opencode reload              # reload config
@@ -797,6 +822,7 @@ opencode mini                # minimal interface
 @fixer <task>                # bounded implementation
 @observer <task>             # reviews / images / diagrams
 @council <task>              # multi-model consensus
+/preset <name>               # switch preset in the current session
 ```
 
 ```bash
@@ -806,10 +832,12 @@ openspec new change <name>  # openspec/changes/<name>
 openspec list                # changes
 openspec list --specs        # current specs
 openspec view                # dashboard
+/openspec                    # router: describe the task, it picks the skill
 /openspec-explore            # explore mode: think through ideas before implementing
 openspec validate <change>
 openspec status <change>     # artifact completion
 openspec archive <change>
+openspec update              # refresh skills after upgrade
 openspec doctor
 ```
 
@@ -837,7 +865,8 @@ herdr --skill                # give an agent Herdr's own instructions
 
 | Symptom | Check |
 |---------|-------|
-| Plugin not loaded | Path must be a directory; OpenCode 2 uses `plugins`, OpenCode 1 uses `plugin`; then `opencode reload` |
+| Plugin not loaded | Configured paths must be directories; direct files belong in `.opencode/plugins/`; OpenCode 2 uses `plugins`, v1 uses `plugin`; then `opencode reload` |
+| TUI-only plugin missing | Put it in `plugins` in `cli.json`, not `tui.jsonc` |
 | Ponytail seems inactive | `cat ~/.config/opencode/.ponytail-active`; `/ponytail` should report `full` |
 | Ponytail fights `AGENTS.md` | The repo's own `AGENTS.md` wins on project conventions; set level `lite` if it is too aggressive |
 | Agent team missing | `~/.config/opencode/oh-my-opencode-slim.json` valid JSON; preset exists; restart OpenCode |
@@ -868,8 +897,8 @@ herdr --skill                # give an agent Herdr's own instructions
 ```
 
 `plugins` is the V2 array. Local plugin files live in
-`~/.config/opencode/plugins/` and load automatically. TUI plugins use the
-separate `plugin` array in `tui.jsonc`.
+`~/.config/opencode/plugins/` or `.opencode/plugins/` and load automatically.
+Terminal-only plugins use the separate `plugins` array in `cli.json`.
 
 ### B. Project `AGENTS.md`
 
@@ -961,17 +990,17 @@ Then validate, implement, verify, and archive: `openspec validate <change>`,
 
 ## 17. Appendix C — versions, licenses and sources
 
-Tested on this setup in October 2026. Licenses were checked at the same time;
-confirm them before redistributing anything.
+Checked against official releases on 2026-11-27. Licenses were checked at the
+same time; confirm them before redistributing anything.
 
 | Tool | Tested | License | Source |
 |------|--------|---------|--------|
-| OpenCode | 2.2.1 | MIT | [repo](https://github.com/anomalyco/opencode) · [docs](https://opencode.ai/v2/docs) |
-| oh-my-opencode-slim | 3.0.6 | MIT | [repo](https://github.com/alvinunreal/oh-my-opencode-slim) · [npm](https://www.npmjs.com/package/oh-my-opencode-slim) |
-| OpenSpec | 1.14.0 | MIT | [repo](https://github.com/Fission-AI/OpenSpec) · [docs](https://openspec.dev/docs) |
+| OpenCode | 2.4.2 | MIT | [repo](https://github.com/anomalyco/opencode) · [docs](https://opencode.ai/v2/docs) |
+| oh-my-opencode-slim | 3.0.8 | MIT | [repo](https://github.com/alvinunreal/oh-my-opencode-slim) · [npm](https://www.npmjs.com/package/oh-my-opencode-slim) |
+| OpenSpec | 2.2.0 | MIT | [repo](https://github.com/Fission-AI/OpenSpec) · [docs](https://openspec.dev/docs) |
 | Ponytail | 5.3.3 | MIT | [repo](https://github.com/DietrichGebert/ponytail) · [install](https://github.com/DietrichGebert/ponytail/blob/main/INSTALL.md) |
-| OpenWolf | plugin, Oct 2026 | AGPL-3.0 | [repo](https://github.com/cytostack/openwolf) · [docs](https://openwolf.com) |
-| Herdr | 0.9.3 | Apache-2.0 | [repo](https://github.com/herdrdev/herdr) · [docs](https://herdr.dev/docs) |
+| OpenWolf | 2.5.3 | AGPL-3.0 | [repo](https://github.com/cytostack/openwolf) · [docs](https://openwolf.com) |
+| Herdr | 0.9.5 | Apache-2.0 | [repo](https://github.com/herdrdev/herdr) · [docs](https://herdr.dev/docs) |
 
 Two naming traps worth knowing:
 

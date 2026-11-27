@@ -15,7 +15,7 @@ The model is not the hard part. The handoffs are: what gets built, by whom,
 how much code, and what we remember afterwards. This guide covers install,
 commands, file locations, security, templates, and four real workflows.
 
-Versions reflect October 2026.
+Versions reflect November 2026.
 
 ## Read it
 
