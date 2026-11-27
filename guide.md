@@ -2,8 +2,9 @@
 
 A practical field guide to running six AI tools as one workflow: **OpenCode**,
 **oh-my-opencode-slim**, **OpenSpec**, **Ponytail**, **OpenWolf** and **Herdr**.
-Install, commands, file locations, security, templates, and the workflows I use
-daily. Versions reflect November 2026.
+Install, commands, file locations, security, templates, the workflows I use
+daily, and a beginner-to-expert runbook (section 18). Versions re-checked
+2026-11-27 against official releases.
 
 ## 1. The stack at a glance
 
@@ -15,11 +16,16 @@ daily. Versions reflect November 2026.
 | **Ponytail** | Coding style: smallest complete change, no over-engineering | OpenCode plugin (level: full) |
 | **OpenWolf** | Project memory: file anatomy, bug fixes, do-not-repeat rules | OpenCode plugin (`.wolf/`) |
 | **Herdr** | Terminal workspace manager: sessions, tabs, panes, git worktrees, agent control | `herdr` CLI + server |
+| **Engram** | Cross-session memory: decisions, bugs, constraints, resumption state | MCP server + local plugin |
+| **Persona** | Role, language, detail level, project conventions | Package plugin |
+| **Custom commands** | Six reusable prompts: plan, execute, surgery, Feynman, humanize, war room | `~/.config/opencode/commands/` |
 
 Mental model: **Herdr** holds the terminals, **OpenCode** is the agent inside
 each pane, **oh-my-opencode-slim** gives that agent a team, **OpenSpec** decides
 *what* to build, **Ponytail** decides *how little* to build, **OpenWolf**
-remembers what was learned. Section 12 is the worked version of this loop.
+remembers what was learned. Persona sets how the agent speaks; Engram remembers
+what it learned across sessions. Sections 12 and 18 are the worked versions of
+this loop.
 
 ![The stack: Herdr holds OpenCode, OpenCode runs the agent team, and the three disciplines scope the work.](diagram.png)
 
@@ -38,8 +44,9 @@ install them only if your work needs them.
 # 1. OpenCode — the host
 curl -fsSL https://opencode.ai/v2/install | bash
 
-# 2. OpenSpec — specs and change artifacts
-npm install -g @fission-ai/openspec@latest
+# 2. OpenSpec — specs and change artifacts (CLI optional on this machine)
+#    skills are already installed in ~/.opencode/skills/
+#    npm install -g @fission-ai/openspec@latest
 
 # 3. oh-my-opencode-slim — the agent team
 bunx oh-my-opencode-slim@latest install
@@ -52,29 +59,42 @@ opencode plugin add @dietrichgebert/ponytail
 npm install -g openwolf
 openwolf init --agent opencode
 
-# 6. Herdr — terminal workspace
+# 6. Engram + Persona — memory and role (already active here)
+engram setup opencode        # MCP server + ~/.config/opencode/plugins/engram.ts
+opencode plugin add opencode-persona
+
+# 7. Herdr — terminal workspace
 curl -fsSL https://herdr.dev/install.sh | sh
 ```
 
 Then verify:
 
 ```bash
-opencode --version      # v2.4.2
-openspec --version      # 2.2.0
+opencode --version      # v2.4.2 (open the v2 install channel; npm `opencode-ai` latest is the v1 line, 1.19.6)
 herdr --version         # 0.9.5
+graphify --version      # 0.9.121 (only if you installed the optional add-on)
+engram --version        # 3.7.2
 herdr status            # client/server state, not a version check
 ```
+
+The OpenSpec **skills** are installed (`~/.opencode/skills/openspec-*`), but the
+`openspec` CLI is not currently on this machine's PATH. Install it with
+`npm install -g @fission-ai/openspec@latest` (latest release 2.2.0) if you want
+`openspec list`, `validate`, `archive` and the other terminal commands.
 
 ### Where each piece registers
 
 | Tool | Registers as | Lives in |
 |------|--------------|----------|
 | OpenCode | Host binary | `~/.local/bin/opencode` |
-| oh-my-opencode-slim | Package plugin | `opencode.jsonc` → `plugins` (v1: `plugin`), package cache |
-| Ponytail | Package plugin | `opencode.jsonc` → `plugins` |
-| OpenWolf | Local plugin file | `~/.config/opencode/plugins/openwolf.js` |
-| OpenSpec | Standalone CLI, not a plugin | `openspec/` per project |
+| oh-my-opencode-slim | Package plugin | `~/.config/opencode/opencode.json` → `plugins`; config `oh-my-opencode-slim.jsonc` |
+| Ponytail | Package plugin | `~/.config/opencode/opencode.json` → `plugins` |
+| OpenWolf | Local plugin directory | `~/.config/opencode/plugins/openwolf/` |
+| OpenSpec | Skills + optional standalone CLI | `~/.opencode/skills/` (global), `openspec/` per project |
 | Herdr | Standalone CLI, not a plugin | `~/.local/bin/herdr` |
+| Engram | Local plugin + MCP server | `~/.config/opencode/plugins/engram.ts`, `opencode.json` → `mcp` |
+| Persona | Package plugin | `~/.config/opencode/opencode.json` → `plugins` |
+| Custom commands | Six `.md` prompt templates | `~/.config/opencode/commands/` |
 
 `opencode plugin list` only reports managed package plugins. It will not show
 local files or terminal-only plugins. Check the three surfaces directly: the
@@ -95,10 +115,13 @@ plugins are outdated.
 
 | Path | What it is |
 |------|------------|
-| `~/.config/opencode/opencode.jsonc` | Main OpenCode config: providers, models, plugins |
+| `~/.config/opencode/opencode.json` | Main OpenCode config on this machine: providers, models, plugins, MCP (`.jsonc` also supported) |
 | `~/.config/opencode/cli.json` | TUI/CLI settings, including terminal-only plugins |
-| `~/.config/opencode/oh-my-opencode-slim.json` | Agent presets, models, council seats |
-| `~/.config/opencode/plugins/` | Auto-loaded global plugins (`openwolf.js`, `herdr-agent-state.js`) |
+| `~/.config/opencode/oh-my-opencode-slim.jsonc` | Agent presets, models, multiplexer (Herdr) |
+| `~/.config/opencode/plugins/` | Auto-loaded global plugins (`engram.ts`, `graphify.js`, `herdr-agent-state.js`, `openwolf/`) |
+| `~/.config/opencode/commands/` | Six custom slash command templates |
+| `~/.opencode/skills/openspec-*` | Global OpenSpec workflow skills |
+| `~/.config/opencode/opencode.json` | MCP registry (`engram`) and plugin list |
 | `.opencode/plugins/` (per project) | Auto-loaded local plugin files and directories |
 | `~/.config/opencode/skills/graphify/` | Graphify skill (`SKILL.md`) |
 | `~/.config/opencode/plugins/graphify.js` | Graphify reminder hook (auto-loaded) |
@@ -175,7 +198,7 @@ Rules of thumb:
   Direct `.ts`/`.js` files are discovered only inside `.opencode/plugins/`.
 - A checkout can be shared with `"/absolute/path/to/checkout/.opencode/plugins"`.
 - Prefix an ID with `-` to disable it, or use `"*"` to affect every plugin.
-- After editing, run `opencode reload` or restart.
+- Config changes reload automatically; use `/reload` or `opencode reload` to force it.
 
 ```bash
 opencode plugin list --builtin   # include built-in plugins
@@ -202,10 +225,14 @@ graphify opencode install --project           # or project-local .opencode/skill
 Open a new session, then `/graphify .` to build `graphify-out/` and query it:
 
 ```bash
+graphify extract . --code-only   # headless build (CI/scripts)
 graphify query "what connects auth to the database?"
 graphify path "UserService" "DatabasePool"
 graphify explain "RateLimiter"
+graphify affected "RateLimiter"  # what breaks if it changes
+graphify god-nodes               # architectural hubs
 graphify update .                  # refresh after changes
+graphify hook install              # auto-rebuild on commits
 ```
 
 Requires Python 3.11.5–3.14 and `uv` (or `pipx`). The plugin hook adds a
@@ -218,7 +245,7 @@ named `graphify`.
 ## 5. oh-my-opencode-slim — the agent team
 
 Installed as an OpenCode plugin; configuration in
-`~/.config/opencode/oh-my-opencode-slim.json` (or `.opencode/oh-my-opencode-slim.json`
+`~/.config/opencode/oh-my-opencode-slim.jsonc` (or `.opencode/oh-my-opencode-slim.jsonc`
 per project). The installer creates `openai` and `opencode-go` presets; the
 `free` preset used in this guide is a custom one. Presets are defined in that file.
 
@@ -262,8 +289,10 @@ skill in OpenCode and ask; it knows the schema and the safe edit flow.
 ## 6. OpenSpec — decide what to build
 
 OpenSpec turns a request into artifacts: **proposal → specs (delta) → design →
-tasks**, then implements and archives. It is installed globally (2.2.0) and
-its skills are available inside OpenCode.
+tasks**, then implements and archives. Release 2.2.0 installed its **skills**
+globally in `~/.opencode/skills/`; the standalone CLI is optional and is not on
+this machine's PATH. Since 2.0 the old `/opsx:*` commands are gone — use the
+`openspec-*` skills or the router.
 
 ### Initialize a project
 
@@ -398,8 +427,8 @@ A deliberate simplification gets:
 
 ## 8. OpenWolf — project memory
 
-Plugin: `~/.config/opencode/plugins/openwolf.js` (auto-loaded). Data lives in
-`.wolf/` in each project.
+Plugin: `~/.config/opencode/plugins/openwolf/` (auto-loaded directory, V2 entry
+`index.ts`). Data lives in `.wolf/` in each project.
 
 | File | Contents |
 |------|----------|
@@ -843,6 +872,16 @@ opencode mini                # minimal interface
 ```
 
 ```bash
+# Custom slash commands (global, available in every project)
+/plan-protocol <project>     # architecture plan
+/execute-protocol            # execute a plan + PROJECT_MAP.md
+/surgical-edit <change>      # minimal, TDD-guarded edit
+/feynman <topic>             # teach-back learning loop
+/humanize <text>             # anti-AI-writing editor
+/war-room <goal>             # Arabic adversarial debate
+```
+
+```bash
 # oh-my-opencode-slim (inside OpenCode)
 @orchestrator <task>         # default: plan, split lanes, dispatch, verify
 @explorer <task>             # read-only recon
@@ -906,7 +945,10 @@ graphify update .            # refresh after changes
 |---------|-------|
 | Plugin not loaded | Configured paths must be directories; direct files belong in `.opencode/plugins/`; OpenCode 2 uses `plugins`, v1 uses `plugin`; then `opencode reload` |
 | TUI-only plugin missing | Put it in `plugins` in `cli.json`, not `tui.jsonc` |
-| Graphify skill missing | Restart OpenCode; check `~/.config/opencode/skills/graphify/SKILL.md` |
+| Graphify skill missing | Run `graphify install --platform opencode`; check `~/.config/opencode/skills/graphify/SKILL.md` |
+| `opencode plugin add` exits 0 but plugin is absent | Check `opencode plugin list` and the log for `failed to load plugin`; V1-only packages export a named function instead of `export default { id, setup() }` and cannot load in v2 |
+| OpenSpec CLI not found | Skills work without it; install with `npm i -g @fission-ai/openspec@latest` |
+| `npm i -g opencode-ai` gives 1.19.6 | That is the v1 line; install v2 from `https://opencode.ai/v2/install` |
 | Ponytail seems inactive | `cat ~/.config/opencode/.ponytail-active`; `/ponytail` should report `full` |
 | Ponytail fights `AGENTS.md` | The repo's own `AGENTS.md` wins on project conventions; set level `lite` if it is too aggressive |
 | Agent team missing | `~/.config/opencode/oh-my-opencode-slim.json` valid JSON; preset exists; restart OpenCode |
@@ -1035,13 +1077,16 @@ same time; confirm them before redistributing anything.
 
 | Tool | Tested | License | Source |
 |------|--------|---------|--------|
-| OpenCode | 2.4.2 | MIT | [repo](https://github.com/anomalyco/opencode) · [docs](https://opencode.ai/v2/docs) |
+| OpenCode | 2.4.2 (GitHub v2 release; npm `latest` is v1 1.19.6) | MIT | [repo](https://github.com/anomalyco/opencode) · [docs](https://opencode.ai/docs) |
 | oh-my-opencode-slim | 3.0.8 | MIT | [repo](https://github.com/alvinunreal/oh-my-opencode-slim) · [npm](https://www.npmjs.com/package/oh-my-opencode-slim) |
 | OpenSpec | 2.2.0 | MIT | [repo](https://github.com/Fission-AI/OpenSpec) · [docs](https://openspec.dev/docs) |
 | Ponytail | 5.3.3 | MIT | [repo](https://github.com/DietrichGebert/ponytail) · [install](https://github.com/DietrichGebert/ponytail/blob/main/INSTALL.md) |
 | OpenWolf | 2.5.3 | AGPL-3.0 | [repo](https://github.com/cytostack/openwolf) · [docs](https://openwolf.com) |
 | Herdr | 0.9.5 | Apache-2.0 | [repo](https://github.com/herdrdev/herdr) · [docs](https://herdr.dev/docs) |
 | Graphify (optional) | 0.9.121 | Apache-2.0 | [repo](https://github.com/Graphify-Labs/graphify) · [docs](https://docs.graphify.com) |
+| Engram | 3.7.2 | see repo | [site](https://engram.tools/) · MCP + local plugin |
+| Persona | 3.0.0 | see repo | [repo](https://github.com/RuloGB/opencode-persona) · npm |
+| uv (Graphify installer) | 0.13.10 | Apache-2.0 OR MIT | [docs](https://docs.astral.sh/uv/) |
 
 Two naming traps worth knowing:
 
@@ -1053,3 +1098,164 @@ Two naming traps worth knowing:
 
 The guide text is original. The tools are third-party; link their repositories
 rather than implying authorship.
+
+---
+
+## 18. From beginner to expert — a complete project run
+
+This chapter is the "start to finish, nothing skipped" version. It assumes a fresh
+machine, an empty folder, and a change that must ship. Use the earlier sections for
+depth; use this one as a checklist.
+
+### 18.1 The ladder
+
+| Level | What you can do | Tools you touch |
+|-------|----------------|-----------------|
+| Beginner | Ask questions, run a command, fix one file, review the diff | OpenCode, `/feynman`, `/humanize`, `/ponytail-review` |
+| Advanced | Spec a feature, build a graph, delegate lanes, verify, archive, remember | + OpenSpec, Graphify, agents, Herdr, Engram, OpenWolf |
+| Expert | Shape the tools themselves: commands, skills, agents, plugins, MCP, permissions, automation | + all config surfaces and review gates |
+
+You do not graduate by reading more. You graduate when you can skip ceremony on a
+one-line fix and add it on a risky multi-file change without being told.
+
+### 18.2 Day 0 — install and verify once
+
+```bash
+curl -fsSL https://opencode.ai/v2/install | bash     # v2, not npm opencode-ai@1.x
+export PATH="$HOME/.local/bin:$PATH"
+opencode --version                                   # v2.4.2
+opencode plugin list                                 # ponytail, persona, slim (+ locals)
+```
+
+Optional companions, only if you use them:
+
+```bash
+npm i -g @fission-ai/openspec@latest      # CLI 2.2.0; skills already installed
+uv tool install graphifyy                 # PyPI name has two y's
+graphify install --platform opencode
+curl -fsSL https://herdr.dev/install.sh | sh
+engram setup opencode                     # MCP + memory plugin
+```
+
+Then look at the three config surfaces: `~/.config/opencode/opencode.json`
+(plugins, MCP, models, permissions), `~/.config/opencode/cli.json` (TUI plugins),
+and `~/.config/opencode/oh-my-opencode-slim.jsonc` (agents and presets). Project
+overrides go in `opencode.jsonc` or `.opencode/` inside the repo.
+
+### 18.3 Beginner — first hour
+
+1. `mkdir myproj && cd myproj && git init` — give the agent a repo, not a loose folder.
+2. `opencode` — start the TUI. `/` lists commands; `Tab` switches agent.
+3. Ask a plain question first: "Look around and explain what this project does."
+4. Learn with `/feynman <topic>`; it will make you explain the topic back until it sticks.
+5. Clean text with `/humanize <text>` when you want a draft to sound less mechanical.
+6. Change one file, then run `/ponytail-review`. Fix what it flags; end with a commit.
+7. If you are unsure about a decision, try `/war-room <goal>` for an adversarial debate.
+   It is a thinking tool, not a source of truth — verify what it proposes.
+
+Do not install OpenSpec, Herdr or a council for step 6. A small fix should feel like
+no process at all.
+
+### 18.4 Every installed command — what it is for
+
+| Command | Use it when | Argument style |
+|---------|-------------|----------------|
+| `/plan-protocol <project>` | You want a Staff Engineer/Tech Lead architecture plan before code | `$ARGUMENTS` = project description |
+| `/execute-protocol` | A plan and `PROJECT_MAP.md` exist and you want continuous execution | arguments appended |
+| `/surgical-edit <change>` | One change must land without touching neighbours | `$ARGUMENTS` = change description |
+| `/feynman <topic>` | You want to understand a topic deeply | `$ARGUMENTS` = topic |
+| `/humanize <text>` | Text reads like a machine wrote it | arguments appended |
+| `/war-room <goal>` | You want assumptions attacked before committing to a design | `$ARGUMENTS` = goal/problem |
+| `/review [commit|branch|pr]` | Review changes; defaults to uncommitted | optional target |
+| `/goal`, `/deepwork`, `/interview`, `/implement` | Keep working to an objective; heavy phases; interview UI for an idea; implement the interview result | built-in/oh-my-slim commands |
+| `/ponytail lite|full|ultra|off` | Change how aggressively "smallest complete change" is enforced | level |
+| `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-gain`, `/ponytail-help` | Diff review, repo audit, shortcut ledger, scoreboard, reference | none |
+| `/preset <name>` | Switch the agent/model preset in the current session | preset name |
+| `/reflect`, `/automation` | Improve a repeated workflow; schedule a recurring check | none / prompt |
+| `/graphify .` | Build the local knowledge graph for the current project | path |
+
+`/interview` writes a markdown brief; `/implement` reads that brief and builds it.
+That pair is the shortest path from a vague idea to a first working version.
+
+### 18.5 Advanced — one feature, empty folder to archived change
+
+1. **Frame it.** Use `/interview` for a messy idea, or write one sentence yourself.
+2. **Decide scope.** In the repo: `openspec init` (once), then the `openspec-explore`
+   skill to think, `openspec-propose` to create proposal + delta spec + design +
+   tasks. `openspec status <change>` shows what is missing.
+3. **Understand the codebase.** `graphify install --platform opencode` once, then
+   `/graphify .`, `graphify query "..."`, `graphify affected "<node>"` and
+   `graphify path A B`. This replaces a lot of grep and several full-file reads.
+4. **Plan and split.** Use `/plan-protocol <change>` for the architecture; ask the
+   orchestrator to split into lanes with **non-overlapping write scopes**. For an
+   expensive design decision, ask for the council or `@oracle`.
+5. **Implement.** `/implement` for an interview brief, or the `openspec-apply-change`
+   skill for a spec'd change. Ponytail stays at `full`; `@fixer` can take bounded
+   lanes. No placeholders, no TODOs, one small test per new branch of logic.
+6. **Verify.** `/ponytail-review` on the diff, then the `openspec-verify-change`
+   skill. If the review finds a real defect, fix it and re-run both.
+7. **Ship.** `openspec archive <change>` merges the deltas into main specs; commit
+   with a message that names the change. `make-pr` (if available) collects build,
+   UI and API evidence for the PR.
+8. **Remember.** `mem_save` with type `decision`, `bugfix` or `pattern` for anything
+   costly to reconstruct; let OpenWolf log the bug in `.wolf/buglog.json`. Do not
+   save raw dumps or routine progress.
+9. **Refresh the graph.** `graphify update .` after the change lands. A stale graph
+   is worse than no graph.
+
+### 18.6 Expert — parallel lanes and long-lived projects
+
+- **Isolation before parallelism.** `herdr` → `herdr workspace create <name>` →
+  `herdr worktree create ...`; one OpenCode pane per worktree. Drive them with
+  `herdr agent list`, `herdr agent prompt <agent> "..."`, `herdr agent wait <agent>`.
+  Never let two agents write the same file.
+- **Delegate by risk.** `@explorer` for read-only recon; `@designer` for UI;
+  `@oracle` after two failed fixes; `@fixer` for bounded implementation;
+  `@observer` for images/PDFs; council for irreversible decisions.
+- **Keep context cheap.** Three to five MCP servers, not ten. Check
+  `.wolf/anatomy.md` before reading files; check Engram with `mem_search` before
+  re-deriving a decision. Graphify answers many "where is X" questions without
+  opening all of X.
+- **Tune the team.** Edit `oh-my-opencode-slim.jsonc` via the `oh-my-opencode-slim`
+  skill; it knows the schema and the safe edit flow. `/preset` switches models live.
+- **Extend the stack.** Custom commands are `.md` files in
+  `~/.config/opencode/commands/`; use `$ARGUMENTS`/`$1` and a short `description`
+  frontmatter. Skills are `SKILL.md` folders; use `skill-creator`. New agents go in
+  `~/.config/opencode/agent/`; use `agent-creator`. Plugins must use V2's
+  `export default { id, setup(ctx) }` — V1 named-export plugins will not load
+  (see `opencode-agent-factory-plugin` in section 15).
+- **Automate carefully.** `/automation` can run a prompt or shell command on a cron.
+  Give it a narrow scope and review its output; it runs without you in the loop.
+- **Guard the boundaries.** Keep `permissions` and `policies` in section 10. An
+  `ask` rule is a speed bump, not a sandbox; a deny policy is the hard stop.
+
+### 18.7 Expert review gates
+
+| Gate | When | Command |
+|------|------|---------|
+| Diff quality | Every non-trivial diff | `/ponytail-review` |
+| Repo health | Weekly or before a release | `/ponytail-audit` |
+| Spec fidelity | Before archiving a change | `openspec-verify-change` skill |
+| Security | Auth, payments, input parsing, CI changes | `/security-review` command (Appendix A) or `@oracle` |
+| Regression | Any behaviour change | project test command from `AGENTS.md` |
+| Memory | End of a hard session | `mem_session_summary` (Goal, Instructions, Discoveries, Accomplished, Next Steps, Relevant Files) |
+
+### 18.8 Routine that keeps this cheap
+
+- **Each session:** open Herdr workspace, start OpenCode, confirm `/ponytail`,
+  search Engram/OpenWolf for prior work before re-deriving it.
+- **Each change:** frame → (spec if multi-file) → graph/context → implement →
+  verify → archive → remember → `graphify update`.
+- **Weekly:** `/ponytail-debt`, `openspec list`, review the week's diff, prune stale
+  `.wolf/` memory.
+- **Monthly:** `/ponytail-audit`, `openspec doctor`, `opencode plugin check`,
+  `opencode plugin update`, `herdr status`, rotate any credential that touched a
+  shared session.
+
+### 18.9 Know when to stop
+
+Skip the ladder entirely for a typo, a throwaway script, or a spike. Skip OpenSpec
+when you cannot yet specify the outcome. Skip parallel lanes when the work is one
+file. Drop to `/ponytail lite` when a repo's own `AGENTS.md` already states the
+conventions. The process is a tool; the diff, the test and the review are the
+product.

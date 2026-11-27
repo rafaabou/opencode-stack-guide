@@ -1,6 +1,6 @@
 # OpenCode Stack — Field Guide
 
-A practical guide to running six AI coding tools as one workflow:
+A practical guide to running six AI coding tools, plus memory and persona helpers, as one workflow:
 
 | Tool | Role |
 |------|------|
@@ -10,15 +10,21 @@ A practical guide to running six AI coding tools as one workflow:
 | [Ponytail](https://github.com/DietrichGebert/ponytail) | Decides how little to build |
 | [OpenWolf](https://github.com/cytostack/openwolf) | Remembers what was learned |
 | [Herdr](https://github.com/herdrdev/herdr) | Terminals, worktrees, parallel agents |
+| [Engram](https://engram.tools/) | Persistent memory across sessions (MCP + plugin) |
+| [Persona](https://github.com/RuloGB/opencode-persona) | Role, language, detail level, project conventions |
 
 Optional add-on: [Graphify](https://github.com/Graphify-Labs/graphify) builds a local,
 queryable knowledge graph of the codebase as an OpenCode skill and plugin hook.
+
+This machine also runs Engram 3.7.2 and Persona 3.0.0, and defines six custom
+slash commands. Section 18 is a beginner-to-expert run from an empty folder to a
+reviewed, remembered change.
 
 The model is not the hard part. The handoffs are: what gets built, by whom,
 how much code, and what we remember afterwards. This guide covers install,
 commands, file locations, security, templates, and four real workflows.
 
-Versions reflect November 2026.
+Versions re-checked 2026-11-27 against official releases.
 
 ## Read it
 
@@ -46,6 +52,7 @@ Versions reflect November 2026.
 15. Appendix A: templates
 16. Appendix B: glossary
 17. Appendix C: versions, licenses and sources
+18. Beginner to expert: a complete project run
 
 ## Note
 
