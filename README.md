@@ -33,6 +33,12 @@ Versions re-checked 2026-11-27 against official releases.
 - [Full guide (Markdown)](guide.md)
 - [Full guide (PDF)](opencode-stack-user-guide.pdf)
 
+## Diagram
+
+This image is embedded in the README and the guide. Regenerate it with
+`python3 make_diagram.py` whenever the tools, roles, skills, commands or the
+real-project flow change.
+
 ![The stack: Herdr isolates the work, Persona and memory load context, OpenSpec scopes the change, Graphify maps the code, agents implement, Ponytail keeps the diff small, and git ships the result.](diagram.png)
 
 ## What's inside
@@ -59,6 +65,17 @@ Versions re-checked 2026-11-27 against official releases.
 20. Beginner to expert: a complete project run
 21. Complete inventory: tools, skills, agents and commands
 22. Real project walkthrough: every tool in its place
+
+## Maintenance — every change
+
+For every change to this guide, do all of these in the same pass:
+
+1. Update `guide.md`; update this README index/caption when the structure changes.
+2. Run `python3 make_diagram.py` if the stack, roles, skills, commands or flow change.
+3. Rebuild `opencode-stack-user-guide.pdf` from the updated Markdown.
+4. Verify `git diff --check`, the PDF build and margins, and diagram readability.
+5. Commit and push the Markdown, README, diagram and PDF together.
+6. Publish a new GitHub release with those files; never rewrite an older release.
 
 ## Note
 

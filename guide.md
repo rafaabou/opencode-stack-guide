@@ -1544,6 +1544,10 @@ such as `opencode-agent-factory-plugin` cannot load.
 4. After adding a skill, open a new session and confirm it appears under `/`.
 5. Update section 21 when you install something — a stale inventory is worse
    than no inventory.
+6. When this guide itself changes, update the Markdown and README, regenerate
+   the diagram if the stack or flow changed, rebuild the PDF, verify the diff
+   and margins, commit and push, then publish a new release with the Markdown,
+   README, diagram and PDF. Never rewrite an older release.
 
 ---
 
