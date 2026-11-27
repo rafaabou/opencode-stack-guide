@@ -18,8 +18,9 @@ queryable knowledge graph of the codebase as an OpenCode skill and plugin hook.
 
 This machine also runs Engram 3.7.2 and Persona 3.0.0, and defines six custom
 slash commands. Section 20 is a beginner-to-expert run from an empty folder to a
-reviewed, remembered change. Section 21 inventories every installed tool,
-skill, agent, plugin, MCP server and custom command.
+reviewed, remembered change. Section 22 walks a real project end to end;
+section 21 inventories every installed tool, skill, agent, plugin, MCP server
+and custom command.
 
 The model is not the hard part. The handoffs are: what gets built, by whom,
 how much code, and what we remember afterwards. This guide covers install,
@@ -57,6 +58,7 @@ Versions re-checked 2026-11-27 against official releases.
 19. Appendix C: versions, licenses and sources
 20. Beginner to expert: a complete project run
 21. Complete inventory: tools, skills, agents and commands
+22. Real project walkthrough: every tool in its place
 
 ## Note
 

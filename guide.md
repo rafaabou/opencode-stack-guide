@@ -29,8 +29,8 @@ each pane, **oh-my-opencode-slim** gives that agent a team, **OpenSpec** decides
 *what* to build, **Ponytail** decides *how little* to build, **OpenWolf**
 remembers what was learned. Persona sets how the agent speaks; Engram remembers
 what it learned across sessions; Graphify maps the code before you touch it.
-Sections 14 and 20 are the worked versions of this loop; section 21 is the
-complete inventory.
+Sections 14 and 20 are the worked versions of this loop; section 22 walks one
+real project end to end, and section 21 is the complete inventory.
 
 ![The stack: Herdr holds OpenCode, OpenCode runs the agent team, and the three disciplines scope the work.](diagram.png)
 
@@ -1251,7 +1251,8 @@ rather than implying authorship.
 
 This chapter is the "start to finish, nothing skipped" version. It assumes a fresh
 machine, an empty folder, and a change that must ship. Use the earlier sections for
-depth; use this one as a checklist.
+depth; use this one as a checklist. Section 22 applies the same checklist to one
+concrete change.
 
 ### 20.1 The ladder
 
@@ -1543,3 +1544,197 @@ such as `opencode-agent-factory-plugin` cannot load.
 4. After adding a skill, open a new session and confirm it appears under `/`.
 5. Update section 21 when you install something — a stale inventory is worse
    than no inventory.
+
+---
+
+## 22. Real project walkthrough — one change, every tool in its place
+
+This is one concrete run: add per-IP rate limiting to `POST /api/login` in an
+existing FastAPI service. Copy the pattern; change the feature, not the handoffs.
+The tools do not compete: OpenSpec owns scope, Graphify owns the code map,
+oh-my-opencode-slim owns delegation, Ponytail owns diff size, Herdr owns
+isolation, Persona owns how the agent addresses you, and Engram plus OpenWolf
+own memory at different scopes.
+
+### 22.1 The handoff map
+
+| Stage | Owner | Artifact |
+|-------|-------|----------|
+| Open the workspace | Herdr + OpenCode | one pane, one branch, one change |
+| Load you and prior work | Persona + Engram + OpenWolf | role, conventions, past decisions, project buglog |
+| Frame the change | You + `/interview` + OpenSpec | proposal, delta spec, tasks |
+| Map the code | Graphify + `@explorer` | affected nodes, exact files to read |
+| Split and isolate | `@orchestrator` + Herdr worktrees | disjoint write scopes |
+| Implement | `@fixer` + Ponytail | smallest complete diff plus tests |
+| Verify | tests + `/ponytail-review` + OpenSpec | evidence that the change works |
+| Remember | Engram + OpenWolf + `graphify update` | searchable memory and a fresh graph |
+| Ship | git + `make-pr` | reviewed pull request |
+
+### 22.2 Session start — load context before typing code
+
+```bash
+herdr
+herdr workspace create rate-limit
+git clone <repo-url> && cd <repo>
+git checkout -b feat/login-rate-limit
+opencode
+```
+
+In the OpenCode prompt:
+
+```text
+what do I have recorded in Persona?
+search memory for rate limiting and auth decisions
+read .wolf/anatomy.md and .wolf/buglog.json; summarize only what affects auth
+/feynman how this service handles POST /api/login
+```
+
+Persona loads your role and conventions. Engram answers "what did we decide in an
+earlier project?" OpenWolf answers "what broke in this project before?" Feynman
+forces you to explain the login path back before you change it. None of these
+steps writes code.
+
+### 22.3 Frame the change — scope before implementation
+
+```text
+/interview Add per-IP rate limiting to POST /api/login: 10 requests per minute,
+429 with Retry-After, Redis in production, in-memory in tests. Do not change
+other routes.
+openspec-explore: identify risks for this change
+openspec-propose: create proposal, delta spec, design and tasks for add-login-rate-limit
+openspec status add-login-rate-limit
+```
+
+Do not start coding while `openspec status` says something is missing. The
+acceptance criteria are the contract: login limited, other routes untouched,
+429 and `Retry-After` tested, production and test stores separated.
+
+### 22.4 Map the code before reading files
+
+```text
+/graphify .
+graphify query "what handles POST /api/login and where are middlewares registered?"
+graphify affected "auth.login"
+graphify path "auth.login" "rate-limit-policy"
+```
+
+Use `@explorer` only for what the graph cannot answer:
+
+```text
+@explorer find the test fixtures and config entries for auth middleware;
+read-only, report paths and line numbers
+```
+
+The graph says what touches login; the explorer reads only the missing details.
+That keeps the context small.
+
+### 22.5 Plan and split — one owner per file
+
+```text
+/plan-protocol add per-IP rate limiting to POST /api/login
+@orchestrator split this change into lanes with disjoint write scopes and name
+the files each lane owns
+```
+
+For a one-file change, keep one lane. For parallel work, isolate first:
+
+```bash
+herdr worktree create rate-limit-policy
+herdr worktree create rate-limit-tests
+```
+
+Open one OpenCode pane per worktree. Never let two agents write the same file.
+If the design choice is contentious, ask `/war-room "per-IP vs per-account rate
+limiting for login"` before the work starts, then verify the answer against the
+acceptance criteria.
+
+### 22.6 Implement — the smallest change that satisfies the spec
+
+```text
+openspec-apply-change add-login-rate-limit
+@fixer implement the delta spec in the files your lane owns; smallest complete
+change; add one test for the 429 path and one for the allowed path
+/surgical-edit Add only the login rate-limit middleware and its tests
+```
+
+Ponytail stays at `full`: no stubs, TODOs, extra options or "future-proofing".
+`/surgical-edit` is the guard when the agent starts drifting into neighbouring
+code. If the docs sound machine-written, run `/humanize` on that text only.
+
+Optional skills join only when the project needs them:
+
+| If the change needs | Add |
+|---------------------|-----|
+| A UI flow | `chrome-mcp-bootstrap`, then `using-openwork-with-chrome-mcp` |
+| A UX PR from a worktree | `worktree-ux-pr` |
+| A Rust lockfile fix | `cargo-lock-manager` |
+| Release notes | `changelog-release-tracker` |
+| Render or Vercel config | `render` or `vercel-env-vars` |
+| A research doc | `research-doc` |
+| Submodule updates | `sync-submodules` |
+| PR evidence | `make-pr` |
+
+Do not install or invoke these "just in case". Each one is a branch, not the
+default path.
+
+### 22.7 Verify — proof before review
+
+```bash
+pytest -q tests/auth/test_rate_limit.py
+```
+
+```text
+/ponytail-review
+@oracle review the security boundary: can the client bypass the per-IP key?
+openspec-verify-change add-login-rate-limit
+```
+
+Fix every real finding and re-run all three checks. `@oracle` is for the
+security-sensitive boundary; it is not a replacement for the project's tests.
+
+### 22.8 Ship and remember — make the next session cheaper
+
+```text
+openspec archive add-login-rate-limit
+```
+
+```bash
+git add -A
+git commit -m "Add per-IP rate limiting to login"
+git push -u origin feat/login-rate-limit
+```
+
+Then ask for `make-pr` to collect the build, test and review evidence. Finish
+the memory pass:
+
+```text
+mem_save: type decision; title "Use Redis for login rate limits"; What, Why,
+Where, Learned
+Log this bug and the rule to OpenWolf if verification found a defect
+graphify update .
+```
+
+At the end of a hard session, `mem_session_summary` captures Goal, Instructions,
+Discoveries, Accomplished, Next Steps and Relevant Files. Save decisions, bugs
+and constraints — not raw transcripts.
+
+### 22.9 What the next session sees
+
+A new session does not start from zero: Persona already knows your role and
+conventions; Engram returns the Redis decision; OpenWolf points at the exact
+auth files and the bug that was fixed; Graphify shows the updated edges;
+OpenSpec's main specs include the archived change. The expensive part — deciding
+and re-discovering — is paid once.
+
+### 22.10 Scale the same run up or down
+
+- **Typo or one-line fix:** OpenCode + `/ponytail-review` only. Skip the spec,
+  agents, worktrees and graph refresh.
+- **Normal multi-file feature:** the full run above.
+- **Risky or parallel change:** add Herdr worktrees, `@orchestrator`, `@oracle`
+  or the council, and a `make-pr` evidence bundle.
+- **Vague idea:** start with `/interview` and `/implement`; add OpenSpec when the
+  outcome can be stated as acceptance criteria.
+
+The process is a tool. The diff, the test, the review and the memory are the
+product.
