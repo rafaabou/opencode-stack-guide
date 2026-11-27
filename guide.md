@@ -20,14 +20,17 @@ daily, and a beginner-to-expert runbook (section 20). Versions re-checked
 | **Herdr** | Terminal workspace manager: sessions, tabs, panes, git worktrees, agent control | `herdr` CLI + server |
 | **Engram** | Cross-session memory: decisions, bugs, constraints, resumption state | MCP server + local plugin |
 | **Persona** | Role, language, detail level, project conventions | Package plugin |
+| **Graphify** | Knowledge graph: where code lives and what a change touches | `graphify` CLI + OpenCode skill/plugin |
+| **Skills** | 47 on-demand instruction packs (17 user-installed, 30 built-in) | `SKILL.md` folders; `/skill-name` or natural language |
 | **Custom commands** | Six reusable prompts: plan, execute, surgery, Feynman, humanize, war room | `~/.config/opencode/commands/` |
 
 Mental model: **Herdr** holds the terminals, **OpenCode** is the agent inside
 each pane, **oh-my-opencode-slim** gives that agent a team, **OpenSpec** decides
 *what* to build, **Ponytail** decides *how little* to build, **OpenWolf**
 remembers what was learned. Persona sets how the agent speaks; Engram remembers
-what it learned across sessions. Sections 14 and 20 are the worked versions of
-this loop.
+what it learned across sessions; Graphify maps the code before you touch it.
+Sections 14 and 20 are the worked versions of this loop; section 21 is the
+complete inventory.
 
 ![The stack: Herdr holds OpenCode, OpenCode runs the agent team, and the three disciplines scope the work.](diagram.png)
 
@@ -122,10 +125,14 @@ plugins are outdated.
 | `~/.config/opencode/oh-my-opencode-slim.jsonc` | Agent presets, models, multiplexer (Herdr) |
 | `~/.config/opencode/plugins/` | Auto-loaded global plugins (`engram.ts`, `graphify.js`, `herdr-agent-state.js`, `openwolf/`) |
 | `~/.config/opencode/commands/` | Six custom slash command templates |
+| `~/.config/opencode/skills/` | 17 user-installed skills (`SKILL.md` folders) |
+| `~/.engram/engram.db` | Engram's SQLite + FTS5 memory store |
 | `~/.opencode/skills/openspec-*` | Global OpenSpec workflow skills |
 | `~/.config/opencode/opencode.json` | MCP registry (`engram`) and plugin list |
 | `.opencode/plugins/` (per project) | Auto-loaded local plugin files and directories |
 | `~/.config/opencode/skills/graphify/` | Graphify skill (`SKILL.md`) |
+| `harness/user-roles/` (per project) | Persona role definitions (`DEV.md`, `ARQ.md`, ...) |
+| `graphify-out/` (per project) | Generated knowledge graph |
 | `~/.config/opencode/plugins/graphify.js` | Graphify reminder hook (auto-loaded) |
 | `~/.config/opencode/.ponytail-active` | Current Ponytail level (`full`) |
 | `~/.config/ponytail/config.json` | Optional Ponytail default mode |
@@ -1398,3 +1405,141 @@ when you cannot yet specify the outcome. Skip parallel lanes when the work is on
 file. Drop to `/ponytail lite` when a repo's own `AGENTS.md` already states the
 conventions. The process is a tool; the diff, the test and the review are the
 product.
+
+
+---
+
+## 21. Complete inventory — every tool, skill, agent and command
+
+This chapter is the registry: what is actually installed on this machine, where
+each piece lives and how you invoke it. Section 20 is the runbook; this is the
+parts list.
+
+### 21.1 The five surfaces
+
+| Surface | What it is | How you invoke it | Where it lives |
+|---------|------------|-------------------|----------------|
+| Skill | An on-demand instruction pack in `SKILL.md` | `/skill-name`, or just ask — the description triggers it | `~/.config/opencode/skills/`, `~/.opencode/skills/`, project `.opencode/skills/` |
+| Command | A reusable prompt template with `$ARGUMENTS` | `/command <args>` | `~/.config/opencode/commands/` |
+| Agent | A named worker with its own model and context | `@agent <task>`, or `Tab` in the TUI | `opencode.json` → `agents`, `oh-my-opencode-slim.jsonc` |
+| Plugin | Code hooking OpenCode events and tools | Auto-loaded at startup | `opencode.json` → `plugins`, `cli.json` → `plugins`, `~/.config/opencode/plugins/` |
+| MCP server | An external tool server the agent can call | The agent calls its tools automatically | `opencode.json` → `mcp` |
+
+You rarely manage these by hand. To create a new one, ask for `skill-creator`,
+`command-creator`, `agent-creator` or `plugin-creator`; they know the exact
+schema and where the files go.
+
+### 21.2 User-installed skills (17)
+
+These live in `~/.config/opencode/skills/`, one `SKILL.md` folder each.
+
+| Skill | Use it for |
+|-------|-----------|
+| `agent-creator` | Create a new OpenCode agent (defaults to gpt-5.2-codex) |
+| `command-creator` | Create a reusable slash command |
+| `plugin-creator` | Create an OpenCode plugin and choose the right load location |
+| `skill-creator` | Create a new skill with the standard scaffold |
+| `graphify` | Any codebase question, especially when `graphify-out/` exists; build/query the graph |
+| `research-doc` | Create and commit a research doc in `research/` |
+| `sync-submodules` | Pull a superproject and update submodules, including dirty ones |
+| `cargo-lock-manager` | Fix `Cargo.lock` / `--locked` failures in CI |
+| `changelog-release-tracker` | Update the internal OpenWork release changelog |
+| `make-pr` | Open a PR with build, UI screenshot and API evidence |
+| `render` | Manage Render services with the local API key |
+| `vercel-env-vars` | Set Vercel environment variables after linking the app |
+| `mcp-arch` | Explain/fix MCP wiring between OpenWork, OpenCode and the server |
+| `chrome-mcp-bootstrap` | Recover Chrome MCP before UI tests |
+| `using-openwork-with-chrome-mcp` | Drive the OpenWork dev renderer and verify UI flows |
+| `worktree-ux-pr` | Rebase a UX branch, verify in Chrome MCP, attach evidence, one PR per worktree |
+| `worktree-workflow` | Worktree per task, regular commits and pushes |
+
+### 21.3 Built-in and workflow skills (30)
+
+The active skill list is 47 in total: the 17 above plus these 30 built-in or
+bundled workflow skills. You can invoke any of them by name; a good description
+also lets the agent choose one for you.
+
+| Skill group | Members |
+|-------------|---------|
+| OpenCode itself | `opencode`, `oh-my-opencode-slim` |
+| Thinking and planning | `deepwork`, `step-back`, `reflect`, `verification-planning`, `ai-estimates`, `deanchor` |
+| Code quality | `simplify`, `clonedeps`, `codemap`, `worktrees` |
+| Ponytail | `ponytail`, `ponytail-review`, `ponytail-audit`, `ponytail-debt`, `ponytail-gain`, `ponytail-help` |
+| OpenSpec | `openspec-onboard`, `openspec-new-change`, `openspec-propose`, `openspec-ff-change`, `openspec-explore`, `openspec-continue-change`, `openspec-apply-change`, `openspec-verify-change`, `openspec-sync-specs`, `openspec-update-change`, `openspec-archive-change`, `openspec-bulk-archive-change` |
+
+OpenSpec skills live in `~/.opencode/skills/` and use short trigger phrases too:
+"openspec new", "openspec apply", "openspec verify", "openspec archive",
+"openspec sync", "openspec update change", "opsx ff". Since 2.0 the old
+`/opsx:*` commands are gone — use the skills or the `/openspec` router.
+
+### 21.4 Every agent
+
+| Agent | Source | Job |
+|-------|--------|-----|
+| `build`, `plan` | OpenCode (`opencode.json`) | Default build and planning agents |
+| `@orchestrator` | oh-my-opencode-slim | Plans, splits lanes, dispatches, verifies |
+| `@explorer` | oh-my-opencode-slim | Read-only codebase recon |
+| `@oracle` | oh-my-opencode-slim | Escalation after two failed fixes or a risky design |
+| `@designer` | oh-my-opencode-slim | UI/UX design decisions |
+| `@fixer` | oh-my-opencode-slim | Bounded multi-file implementation |
+| `@observer` | oh-my-opencode-slim | Images, PDFs, diagrams |
+| `@council` | oh-my-opencode-slim | Multi-model adversarial debate |
+
+Slim's `multiplexer` is set to Herdr, so subagents get their own panes. The
+configured models are in `~/.config/opencode/oh-my-opencode-slim.jsonc`; change
+them with the `oh-my-opencode-slim` skill, not by hand-editing the JSONC blindly.
+
+### 21.5 Plugins, TUI plugins and MCP
+
+| Component | Scope | Purpose |
+|-----------|-------|---------|
+| `@dietrichgebert/ponytail` | global (`opencode.json`) | Smallest-complete-change discipline and review commands |
+| `opencode-persona` | global (`opencode.json`) | Role, language, detail and conventions via Engram |
+| `oh-my-opencode-slim` | global (`opencode.json`) | Agent team, presets, delegation |
+| `./herdr-opencode` | TUI (`cli.json`) | Reports agent state to Herdr panes |
+| `~/.config/opencode/plugins/engram.ts` | local file | Engram MCP/plugin bridge |
+| `~/.config/opencode/plugins/graphify.js` | local file | One-time graph reminder before the first shell command |
+| `~/.config/opencode/plugins/herdr-agent-state.js` | local file | Session status mirroring |
+| `~/.config/opencode/plugins/openwolf/` | local directory | Project anatomy, buglog, do-not-repeat rules |
+| `engram` MCP server | `opencode.json` → `mcp` | Runs `engram mcp --tools=agent` |
+
+Verify with `opencode plugin list` and `opencode plugin list --builtin`. A plugin
+can report success but fail to load: check the log for `failed to load plugin`.
+OpenCode v2 requires `export default { id, setup(ctx) }`; V1 named-export plugins
+such as `opencode-agent-factory-plugin` cannot load.
+
+### 21.6 The six custom commands
+
+| Command | Arguments | Use |
+|---------|-----------|-----|
+| `/plan-protocol <project>` | `$ARGUMENTS` | Staff Engineer / Tech Lead architecture plan |
+| `/execute-protocol` | appended after a blank line | Execute a plan plus `PROJECT_MAP.md` |
+| `/surgical-edit <change>` | `$ARGUMENTS` | Change only what must change, TDD-guarded |
+| `/feynman <topic>` | `$ARGUMENTS` | Teach-back loop until the topic is simple and complete |
+| `/humanize <text>` | appended after a blank line | Strip AI writing patterns |
+| `/war-room <goal>` | `$ARGUMENTS` | Arabic adversarial debate, then the final answer |
+
+### 21.7 Command-line tools on this machine
+
+| Tool | Version | Job |
+|------|---------|-----|
+| `opencode` | 2.4.2 | AI coding host, TUI and API |
+| `oh-my-opencode-slim` | 3.0.8 | Agent presets (plugin) |
+| `engram` | 3.7.2 | Persistent memory (binary + MCP) |
+| `herdr` | 0.9.5 | Terminal workspace manager |
+| `graphify` | 0.9.121 | Knowledge graph (installed via `uv tool install graphifyy`) |
+| `uv` | 0.13.10 | Python tool installer |
+| `git` | 2.53.0 | Version control (bundled path on this machine) |
+| `pandoc` | 3.14 | Markdown → LaTeX for this guide's PDF |
+| XeTeX / TeX Live | 2026 (TinyTeX) | `xelatex` produces the PDF via `xdvipdfmx` |
+| `openspec` CLI | not installed | Optional; skills work without it |
+
+### 21.8 Grow the stack safely
+
+1. Add a skill for repeatable knowledge, a command for repeatable prompts, an
+   agent for repeatable delegation, a plugin for repeatable behaviour.
+2. Keep write scopes disjoint between agents; never two writers on one file.
+3. After any plugin change run `opencode plugin list` and read the log.
+4. After adding a skill, open a new session and confirm it appears under `/`.
+5. Update section 21 when you install something — a stale inventory is worse
+   than no inventory.
