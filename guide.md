@@ -4,8 +4,8 @@ A practical field guide to the whole OpenCode stack: nine tools —
 **OpenCode**, **oh-my-opencode-slim**, **OpenSpec**, **Ponytail**, **OpenWolf**,
 **Herdr**, **Engram**, **Persona** and **Graphify** — plus 47 skills, six custom
 commands, agents, plugins and MCP that make them work together.
-Install, commands, file locations, security, templates, the workflows I use
-daily, and a beginner-to-expert runbook (section 20). Versions re-checked
+Install, commands, file locations, security, templates, shared team workflows,
+and a beginner-to-expert runbook (section 20). Versions re-checked
 2026-11-27 against official releases.
 
 ## 1. The stack at a glance
@@ -75,7 +75,7 @@ curl -fsSL https://herdr.dev/install.sh | sh
 Then verify:
 
 ```bash
-opencode --version      # v2.4.2 (open the v2 install channel; npm `opencode-ai` latest is the v1 line, 1.19.6)
+opencode --version      # v2.4.2 (v2 channel; npm v1 is 1.19.6)
 herdr --version         # 0.9.5
 graphify --version      # 0.9.121 (only if you installed the optional add-on)
 engram --version        # 3.7.2
@@ -162,7 +162,8 @@ Useful subcommands:
 
 ```bash
 opencode models          # list available models
-opencode mcp add <name> --global --url <url>   # e.g. context7 --url https://mcp.context7.com/mcp
+opencode mcp add <name> --global --url <url>
+# context7 URL: https://mcp.context7.com/mcp
 opencode mcp list
 opencode mcp logout <name>
 opencode auth login      # add a provider credential
@@ -644,26 +645,44 @@ Put shared rules at the top level, narrow rules after them (last match wins):
 
 ```jsonc
 "permissions": [
-  { "action": "shell", "resource": "*", "effect": "ask" },
-  { "action": "shell", "resource": "git status *", "effect": "allow" },
-  { "action": "shell", "resource": "git diff *", "effect": "allow" },
-  { "action": "shell", "resource": "git log *", "effect": "allow" },
-  { "action": "read", "resource": "*.env", "effect": "deny" },
-  { "action": "read", "resource": "*.env.*", "effect": "deny" },
-  { "action": "read", "resource": "*.ssh/*", "effect": "deny" },
-  { "action": "read", "resource": "*.pem", "effect": "deny" },
-  { "action": "read", "resource": "*.config/gh/*", "effect": "deny" },
-  { "action": "external_directory", "resource": "*", "effect": "ask" },
-  { "action": "shell", "resource": "tofu apply *", "effect": "ask" },
-  { "action": "shell", "resource": "tofu destroy *", "effect": "deny" },
-  { "action": "shell", "resource": "ansible-playbook *", "effect": "ask" }
+  { "action": "shell", "resource": "*",
+    "effect": "ask" },
+  { "action": "shell", "resource": "git status *",
+    "effect": "allow" },
+  { "action": "shell", "resource": "git diff *",
+    "effect": "allow" },
+  { "action": "shell", "resource": "git log *",
+    "effect": "allow" },
+  { "action": "read", "resource": "*.env",
+    "effect": "deny" },
+  { "action": "read", "resource": "*.env.*",
+    "effect": "deny" },
+  { "action": "read", "resource": "*.ssh/*",
+    "effect": "deny" },
+  { "action": "read", "resource": "*.pem",
+    "effect": "deny" },
+  { "action": "read", "resource": "*.config/gh/*",
+    "effect": "deny" },
+  { "action": "external_directory", "resource": "*",
+    "effect": "ask" },
+  { "action": "shell", "resource": "tofu apply *",
+    "effect": "ask" },
+  { "action": "shell", "resource": "tofu destroy *",
+    "effect": "deny" },
+  { "action": "shell", "resource": "ansible-playbook *",
+    "effect": "ask" }
 ],
 "policies": [
-  { "action": "tool.use", "resource": "shell:sudo *", "effect": "deny" },
-  { "action": "tool.use", "resource": "shell:ssh *", "effect": "deny" },
-  { "action": "tool.use", "resource": "shell:gh auth token*", "effect": "deny" },
-  { "action": "tool.use", "resource": "shell:docker system prune *", "effect": "deny" },
-  { "action": "tool.use", "resource": "shell:git push --force*", "effect": "deny" }
+  { "action": "tool.use", "resource": "shell:sudo *",
+    "effect": "deny" },
+  { "action": "tool.use", "resource": "shell:ssh *",
+    "effect": "deny" },
+  { "action": "tool.use", "resource": "shell:gh auth token*",
+    "effect": "deny" },
+  { "action": "tool.use", "resource": "shell:docker system prune *",
+    "effect": "deny" },
+  { "action": "tool.use", "resource": "shell:git push --force*",
+    "effect": "deny" }
 ]
 ```
 
@@ -764,11 +783,11 @@ jobs separate.
 ### 14.2 The loop
 
 ```text
-Herdr          OpenSpec        orchestrator      Ponytail        reviewers        OpenWolf
-where     →    what       →    who          →    how much   →    is it safe?  →   remember
-(panes)        (change)        (subagents)       (min diff)      (review)         (.wolf)
-   ↑                                                                                  │
-   └────────────────────────── next task / parallel lane ────────────────────────────┘
+Herdr → OpenSpec → orchestrator → Ponytail → reviewers → OpenWolf
+where    what       who            how much    is safe?    remember
+panes    change     subagents      min diff    review      .wolf
+   ↑                                                       │
+   └──────── next task / parallel lane ────────────────────┘
 ```
 
 Start in Herdr, decide scope with OpenSpec when it is worth it, let the
@@ -970,7 +989,8 @@ One block per tool. Copy-paste these, do not memorize them.
 opencode                     # TUI
 opencode run "..."           # one-shot
 opencode models              # models
-opencode mcp add <name> --global --url <url>   # e.g. context7 --url https://mcp.context7.com/mcp
+opencode mcp add <name> --global --url <url>
+# context7 URL: https://mcp.context7.com/mcp
 opencode mcp list
 opencode auth login          # add a provider credential
 opencode mcp logout <name>
@@ -1030,7 +1050,7 @@ openspec list                # changes
 openspec list --specs        # current specs
 openspec view                # dashboard
 /openspec                    # router: describe the task, it picks the skill
-/openspec-explore            # explore mode: think through ideas before implementing
+/openspec-explore            # explore before implementing
 openspec validate <change>
 openspec status <change>     # artifact completion
 openspec archive <change>
@@ -1143,10 +1163,10 @@ diffs, OpenWolf for project memory.
 - format: `npm run format`
 
 ## Rules
-- Check `.wolf/anatomy.md` before opening files and `.wolf/cerebrum.md` before writing.
+- Check `.wolf/anatomy.md` before files; `.wolf/cerebrum.md` before writing.
 - No new dependency without asking.
 - Never read or print `.env*`, `*.pem`, or anything under `~/.ssh`.
-- Do not run `tofu apply`, `ansible-playbook`, `docker system prune`, or force-push.
+- Do not run `tofu apply`, `ansible-playbook`, `docker prune`, or force-push.
 - Match the surrounding style. No drive-by refactors.
 ```
 
@@ -1271,7 +1291,7 @@ one-line fix and add it on a risky multi-file change without being told.
 curl -fsSL https://opencode.ai/v2/install | bash     # v2, not npm opencode-ai@1.x
 export PATH="$HOME/.local/bin:$PATH"
 opencode --version                                   # v2.4.2
-opencode plugin list                                 # ponytail, persona, slim (+ locals)
+opencode plugin list                                 # ponytail, persona, slim
 ```
 
 Optional companions, only if you use them:
@@ -1605,8 +1625,9 @@ steps writes code.
 429 with Retry-After, Redis in production, in-memory in tests. Do not change
 other routes.
 openspec-explore: identify risks for this change
-openspec-propose: create proposal, delta spec, design and tasks for add-login-rate-limit
-openspec status add-login-rate-limit
+openspec-propose: create proposal, delta spec,
+design and tasks for login-rate-limit
+openspec status login-rate-limit
 ```
 
 Do not start coding while `openspec status` says something is missing. The
@@ -1617,7 +1638,8 @@ acceptance criteria are the contract: login limited, other routes untouched,
 
 ```text
 /graphify .
-graphify query "what handles POST /api/login and where are middlewares registered?"
+graphify query "POST /api/login handler"
+graphify query "where middleware is registered"
 graphify affected "auth.login"
 graphify path "auth.login" "rate-limit-policy"
 ```
@@ -1655,7 +1677,7 @@ acceptance criteria.
 ### 22.6 Implement — the smallest change that satisfies the spec
 
 ```text
-openspec-apply-change add-login-rate-limit
+openspec-apply-change login-rate-limit
 @fixer implement the delta spec in the files your lane owns; smallest complete
 change; add one test for the 429 path and one for the allowed path
 /surgical-edit Add only the login rate-limit middleware and its tests
@@ -1690,7 +1712,7 @@ pytest -q tests/auth/test_rate_limit.py
 ```text
 /ponytail-review
 @oracle review the security boundary: can the client bypass the per-IP key?
-openspec-verify-change add-login-rate-limit
+openspec-verify-change login-rate-limit
 ```
 
 Fix every real finding and re-run all three checks. `@oracle` is for the
@@ -1699,7 +1721,7 @@ security-sensitive boundary; it is not a replacement for the project's tests.
 ### 22.8 Ship and remember — make the next session cheaper
 
 ```text
-openspec archive add-login-rate-limit
+openspec archive login-rate-limit
 ```
 
 ```bash
